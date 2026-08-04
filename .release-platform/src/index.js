@@ -42,7 +42,7 @@ export default {
     try {
       if (url.pathname === "/api/health") return health(env);
       if (url.pathname === "/api/version") return json({ name: "CoreCare Platform", version: VERSION, release: "CoreCare Platform 1.11.0 - secure Stripe Billing integration" });
-      if (url.pathname === "/auth/portal-login" && request.method === "POST") return portalLogin(request, env, "PLATFORM");
+      if (["/auth/portal-login", "/api/auth/portal-login"].includes(url.pathname) && request.method === "POST") return portalLogin(request, env, "PLATFORM");
       if (url.pathname === STRIPE_WEBHOOK_PATH && request.method === "POST") return await stripeWebhook(request, env);
       if (url.pathname === "/api/platform/health-ingest" && request.method === "POST") return ingestPlatformHealth(request, env);
       if (url.pathname === "/api/platform/product-tickets" && request.method === "POST") return ingestProductTicket(request, env);
