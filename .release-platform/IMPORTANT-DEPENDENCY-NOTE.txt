@@ -1,3 +1,0 @@
-This update intentionally does not include package-lock.json.
-Keep the repaired package-lock.json already generated on your computer.
-If the broken lockfile was copied in, delete package-lock.json and node_modules, then run npm install before committing.
