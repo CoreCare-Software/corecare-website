@@ -1,0 +1,28 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.17.0
+2 info using node@v26.5.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\chatv gpt test\Documents\GitHub\corecare-website\.npmrc
+5 silly config load:file:C:\Users\chatv gpt test\.npmrc
+6 silly config load:file:C:\Users\chatv gpt test\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install" "--ignore-scripts" "--prefer-offline" "--no-audit" "--no-fund" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:C:\Users\chatv gpt test\Documents\GitHub\corecare-website\.npm-cache\_logs\2026-08-04T14_01_25_134Z-
+10 verbose logfile C:\Users\chatv gpt test\Documents\GitHub\corecare-website\.npm-cache\_logs\2026-08-04T14_01_25_134Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2068054016 maxSize:517013504 maxEntrySize:258506752
+13 silly idealTree buildDeps
+14 http fetch GET https://registry.npmjs.org/npm attempt 1 failed with EACCES
+15 silly reify mark retired [
+15 silly reify   'C:\\Users\\chatv gpt test\\Documents\\GitHub\\corecare-website\\node_modules\\react-loading-skeleton'
+15 silly reify ]
+16 silly reify moves {
+16 silly reify   'C:\\Users\\chatv gpt test\\Documents\\GitHub\\corecare-website\\node_modules\\react-loading-skeleton': 'C:\\Users\\chatv gpt test\\Documents\\GitHub\\corecare-website\\node_modules\\.react-loading-skeleton-Hz0MgmZL'
+16 silly reify }
+17 silly REMOVE node_modules/react-loading-skeleton
+18 verbose cwd C:\Users\chatv gpt test\Documents\GitHub\corecare-website
+19 verbose os Windows_NT 10.0.26200
+20 verbose node v26.5.0
+21 verbose npm  v11.17.0
+22 verbose exit 0
+23 info ok
