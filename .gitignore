@@ -42,3 +42,7 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/.release-care/
+/.release-platform/
+/care-release.zip
+/platform-release.zip
