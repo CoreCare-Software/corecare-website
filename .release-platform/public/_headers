@@ -1,0 +1,19 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cross-Origin-Resource-Policy: same-origin
+  Cache-Control: no-store, max-age=0
+  Content-Security-Policy: default-src 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+
+/index.html
+  Cache-Control: no-store, max-age=0
+
+/app.js
+  Cache-Control: no-store, max-age=0
+
+/styles.css
+  Cache-Control: no-store, max-age=0

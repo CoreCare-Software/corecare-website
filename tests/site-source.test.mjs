@@ -13,15 +13,22 @@ test("ships the CoreCare showcase and product suite", async () => {
   assert.match(styles, /@media\(max-width:760px\)/);
 });
 
-test("includes durable trial and unified login routes", async () => {
-  const [schema, trialRoute, loginRoute, hosting] = await Promise.all([
+test("includes durable trial and product-owned login handoffs", async () => {
+  const [schema, trialRoute, activationRoute, loginRoute, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trials/activate/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
   assert.match(schema, /trial_requests/);
-  assert.match(trialRoute, /30 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
+  assert.match(schema, /analytics_events/);
+  assert.match(trialRoute, /status: "requested"/);
+  assert.match(activationRoute, /30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(loginRoute, /\/auth\/portal-login/);
+  assert.doesNotMatch(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
+  assert.match(worker, /Content-Security-Policy/);
+  assert.match(worker, /Strict-Transport-Security/);
   assert.equal(JSON.parse(hosting).d1, "DB");
 });

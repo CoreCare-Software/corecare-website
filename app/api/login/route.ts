@@ -1,8 +1,6 @@
-import { desc, eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
-import { getDb } from "../../../db";
-import { trialRequests } from "../../../db/schema";
-import { getProduct, type ProductCode } from "../../products";
+import { PRODUCTS, getProduct, type CoreCareProduct, type ProductCode } from "../../products";
+import { allowFormRequest, recordEvent, validSameOriginRequest } from "../_shared/forms";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max = 1024) => String(value ?? "").trim().slice(0, max);
@@ -15,42 +13,58 @@ function messageFrom(payload: unknown) {
 
 function productOrigin(code: ProductCode, fallback: string) {
   const runtime = env as unknown as Record<string, string | undefined>;
-  return clean(runtime[`CORECARE_${code}_ORIGIN`], 500) || fallback;
+  return (clean(runtime[`CORECARE_${code}_ORIGIN`], 500) || fallback).replace(/\/$/, "");
+}
+
+async function checkCredentials(product: CoreCareProduct, email: string, password: string) {
+  const origin = productOrigin(product.code, product.liveUrl);
+  try {
+    const upstream = await fetch(`${origin}/api/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json", "user-agent": "CoreCare-Systems-Portal/2.0" },
+      body: JSON.stringify({ email, password }),
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    const payload = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) return { valid: false as const, status: upstream.status, message: messageFrom(payload), origin };
+    const rawCookie = upstream.headers.get("set-cookie") || "";
+    const sessionCookie = rawCookie.split(";", 1)[0];
+    if (sessionCookie) {
+      await fetch(`${origin}/api/auth/logout`, { method: "POST", headers: { cookie: sessionCookie, accept: "application/json", "user-agent": "CoreCare-Systems-Portal/2.0" }, signal: AbortSignal.timeout(5_000) }).catch(() => undefined);
+    }
+    return { valid: true as const, status: 200, origin };
+  } catch {
+    return { valid: false as const, status: 502, message: `${product.name} could not be reached.`, origin };
+  }
 }
 
 export async function POST(request: Request) {
+  if (!validSameOriginRequest(request)) return Response.json({ error: "This sign-in request could not be verified." }, { status: 403 });
   const input = await request.json().catch(() => ({})) as Record<string, unknown>;
   const email = clean(input.email, 240).toLowerCase();
   const password = String(input.password || "");
-  let product = getProduct(clean(input.productCode, 20));
+  const selected = getProduct(clean(input.productCode, 20));
   if (!EMAIL_PATTERN.test(email) || !password || password.length > 1024) return Response.json({ error: "Enter your email address and password." }, { status: 400 });
+  const rate = await allowFormRequest(request, "login-portal", 10, 15);
+  if (!rate.allowed) return Response.json({ error: "Too many sign-in attempts were made from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
 
-  if (!product) {
-    try {
-      const db = getDb();
-      const matches = await db.select({ productCode: trialRequests.productCode }).from(trialRequests)
-        .where(eq(trialRequests.email, email)).orderBy(desc(trialRequests.createdAt)).limit(10);
-      const codes = [...new Set(matches.map((row) => row.productCode))];
-      if (codes.length === 1) product = getProduct(codes[0]);
-      if (codes.length > 1) return Response.json({ error: "You have access to more than one CoreCare product. Choose the product you want to open.", products: codes }, { status: 409 });
-    } catch { /* A product can still be selected manually while D1 is unavailable. */ }
+  if (selected) {
+    const result = await checkCredentials(selected, email, password);
+    await recordEvent("login_check", { productCode: selected.code, path: "/login", outcome: result.valid ? "valid" : String(result.status) });
+    if (!result.valid) return Response.json({ error: result.message, directUrl: result.status === 502 ? result.origin : undefined }, { status: result.status === 429 ? 429 : result.status === 502 ? 502 : 401, headers: { "cache-control": "no-store" } });
+    return Response.json({ ok: true, product: { code: selected.code, name: selected.name }, handoffUrl: `${result.origin}/auth/portal-login` }, { headers: { "cache-control": "no-store" } });
   }
-  if (!product) return Response.json({ error: "Choose your CoreCare product so we can take you to the right sign-in." }, { status: 409 });
-  const origin = productOrigin(product.code, product.liveUrl).replace(/\/$/, "");
-  if (product.code === "PLATFORM") return Response.json({ ok: true, redirect: origin });
 
-  try {
-    const upstream = await fetch(`${origin}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json", accept: "application/json", "user-agent": "CoreCare-Systems-Portal/1.0" }, body: JSON.stringify({ email, password }), redirect: "manual" });
-    const payload = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) return Response.json({ error: messageFrom(payload) }, { status: upstream.status === 429 ? 429 : 401, headers: { "cache-control": "no-store" } });
-    const host = new URL(request.url).hostname.toLowerCase();
-    const sharedDomainReady = host === "corecaresystems.co.uk" || host.endsWith(".corecaresystems.co.uk");
-    if (!sharedDomainReady) return Response.json({ error: "Unified sign-in will become active when corecaresystems.co.uk and the product subdomains are connected.", directUrl: origin }, { status: 409 });
-    const rawCookie = upstream.headers.get("set-cookie");
-    if (!rawCookie) return Response.json({ error: "This product did not return a sign-in session." }, { status: 502 });
-    const cookie = `${rawCookie.split(";").filter((part) => !part.trim().toLowerCase().startsWith("domain=")).join(";")}; Domain=.corecaresystems.co.uk`;
-    return Response.json({ ok: true, redirect: origin }, { headers: { "set-cookie": cookie, "cache-control": "no-store" } });
-  } catch {
-    return Response.json({ error: "This CoreCare product could not be reached. Please try again shortly.", directUrl: origin }, { status: 502 });
+  const results = await Promise.all(PRODUCTS.map(async (product) => ({ product, result: await checkCredentials(product, email, password) })));
+  const matches = results.filter((entry) => entry.result.valid);
+  await recordEvent("login_discovery", { path: "/login", outcome: matches.length === 0 ? "none" : matches.length === 1 ? "single" : "multiple" });
+  if (matches.length === 1) {
+    const match = matches[0];
+    return Response.json({ ok: true, product: { code: match.product.code, name: match.product.name }, handoffUrl: `${match.result.origin}/auth/portal-login` }, { headers: { "cache-control": "no-store" } });
   }
+  if (matches.length > 1) return Response.json({ error: "Your account is valid in more than one CoreCare product. Choose the workspace you want to open.", products: matches.map(({ product }) => ({ code: product.code, name: product.name })) }, { status: 409, headers: { "cache-control": "no-store" } });
+  const unavailable = results.every(({ result }) => result.status === 502);
+  const locked = results.some(({ result }) => result.status === 429);
+  return Response.json({ error: unavailable ? "CoreCare products could not be reached. Please try again shortly." : locked ? "Too many unsuccessful attempts. Please wait before trying again." : "The email address or password was not accepted by any CoreCare product." }, { status: unavailable ? 502 : locked ? 429 : 401, headers: { "cache-control": "no-store" } });
 }

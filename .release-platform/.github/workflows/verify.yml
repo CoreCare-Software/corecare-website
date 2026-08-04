@@ -1,0 +1,29 @@
+name: Verify CoreCare Platform
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run migrations:check
+      - run: npm test
+      - run: node --check src/index.js
+      - run: node --check public/app.js
+      - run: npm run types
+      - run: git diff --exit-code worker-configuration.d.ts
+      - run: npm audit --omit=dev
+      - run: npm run check
