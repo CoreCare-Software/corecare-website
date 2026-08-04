@@ -14,10 +14,12 @@ test("ships the CoreCare showcase and product suite", async () => {
 });
 
 test("includes durable trial and product-owned login handoffs", async () => {
-  const [schema, trialRoute, activationRoute, loginRoute, worker, hosting] = await Promise.all([
+  const [schema, trialRoute, activationRoute, passwordRoute, statusClient, loginRoute, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/activate/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trials/password/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/trial/status/status-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
@@ -26,6 +28,10 @@ test("includes durable trial and product-owned login handoffs", async () => {
   assert.match(schema, /analytics_events/);
   assert.match(trialRoute, /status: "requested"/);
   assert.match(activationRoute, /30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(schema, /automation_token/);
+  assert.match(passwordRoute, /trial-password/);
+  assert.match(passwordRoute, /credentialsSetAt/);
+  assert.match(statusClient, /Activate my 30-day trial/);
   assert.match(loginRoute, /\/auth\/portal-login/);
   assert.doesNotMatch(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
   assert.match(worker, /Content-Security-Policy/);

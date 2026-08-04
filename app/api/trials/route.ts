@@ -34,12 +34,13 @@ export async function POST(request: Request) {
 
     const id = crypto.randomUUID();
     const accessToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
-    await db.insert(trialRequests).values({ id, accessToken, email, contactName, companyName, phone, productCode: product.code, teamSize, status: "requested", trialStartedAt: "", trialEndsAt: "", provisioningStatus: "queued", consentVersion: "2026-08-04", source: "website" });
+    const automationToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
+    await db.insert(trialRequests).values({ id, accessToken, automationToken, email, contactName, companyName, phone, productCode: product.code, teamSize, status: "requested", trialStartedAt: "", trialEndsAt: "", provisioningStatus: "queued", consentVersion: "2026-08-04", source: "website" });
     let provisioningStatus = "queued";
     try {
-      const dispatched = await dispatchAutomation("trial", { id, email, contactName, companyName, phone, teamSize, productCode: product.code, statusCallbackToken: accessToken });
-      provisioningStatus = dispatched.dispatched ? "dispatched" : "queued";
-      if (dispatched.dispatched) await db.update(trialRequests).set({ provisioningStatus: "dispatched", updatedAt: new Date().toISOString() }).where(eq(trialRequests.id, id));
+      const dispatched = await dispatchAutomation("trial", { automationToken });
+      provisioningStatus = dispatched.dispatched ? String(dispatched.result.status || "awaiting_credentials") : "queued";
+      if (dispatched.dispatched) await db.update(trialRequests).set({ provisioningStatus, workspaceUrl: String(dispatched.result.workspaceUrl || "") || null, updatedAt: new Date().toISOString() }).where(eq(trialRequests.id, id));
     } catch {
       provisioningStatus = "dispatch_pending";
       await db.update(trialRequests).set({ provisioningStatus: "dispatch_pending", provisioningError: "Automation delivery is pending.", updatedAt: new Date().toISOString() }).where(eq(trialRequests.id, id));

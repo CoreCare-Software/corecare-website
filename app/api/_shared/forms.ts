@@ -45,15 +45,14 @@ export async function recordEvent(eventName: string, details: { productCode?: st
 
 export async function dispatchAutomation(kind: "trial" | "contact", payload: Record<string, unknown>) {
   const runtime = env as unknown as Record<string, string | undefined>;
-  const url = runtime.CORECARE_AUTOMATION_URL;
-  const secret = runtime.CORECARE_AUTOMATION_SECRET;
-  if (!url || !secret) return { dispatched: false as const };
+  const url = runtime.CORECARE_AUTOMATION_URL || "https://corecare-platform.cselectricalservices11.workers.dev/api/public/automation";
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-corecare-automation-key": secret },
+    headers: { "content-type": "application/json", "user-agent": "corecare-systems-website/1.0" },
     body: JSON.stringify({ kind, ...payload }),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(20_000),
   });
   if (!response.ok) throw new Error(`automation_${response.status}`);
-  return { dispatched: true as const };
+  const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+  return { dispatched: true as const, result };
 }

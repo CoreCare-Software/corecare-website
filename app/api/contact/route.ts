@@ -22,10 +22,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Complete your name, organisation, work email, message and privacy confirmation." }, { status: 400 });
     }
     const id = crypto.randomUUID();
+    const automationToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
     const reference = `CC-${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${id.slice(0, 6).toUpperCase()}`;
-    await getDb().insert(contactRequests).values({ id, reference, email, contactName, companyName, productCode: product?.code || null, message, status: "new", consentVersion: "2026-08-04" });
+    await getDb().insert(contactRequests).values({ id, reference, automationToken, email, contactName, companyName, productCode: product?.code || null, message, status: "new", consentVersion: "2026-08-04" });
     let outcome = "saved";
-    try { const dispatched = await dispatchAutomation("contact", { id, reference, email, contactName, companyName, productCode: product?.code || null, message }); outcome = dispatched.dispatched ? "dispatched" : "saved"; } catch { outcome = "dispatch_pending"; }
+    try { const dispatched = await dispatchAutomation("contact", { automationToken }); outcome = dispatched.dispatched ? "dispatched" : "saved"; } catch { outcome = "dispatch_pending"; }
     await recordEvent("contact_request", { productCode: product?.code, path: "/contact", outcome });
     return Response.json({ ok: true, reference }, { status: 201 });
   } catch {
