@@ -97,9 +97,10 @@ test("includes durable trial, live checkout and one-time product login grants", 
 });
 
 test("protects every public write form with end-to-end Turnstile validation", async () => {
-  const [widget, helper, loginClient, trialClient, contactClient, rightsClient, loginRoute, trialRoute, contactRoute, rightsRoute, config] = await Promise.all([
+  const [widget, helper, loginPage, loginClient, trialClient, contactClient, rightsClient, loginRoute, trialRoute, contactRoute, rightsRoute, config] = await Promise.all([
     readFile(new URL("../app/turnstile-widget.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/_shared/turnstile.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/trial/trial-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/contact/contact-client.tsx", import.meta.url), "utf8"),
@@ -123,6 +124,10 @@ test("protects every public write form with end-to-end Turnstile validation", as
   assert.match(helper, /result\.action === expectedAction/);
   assert.match(helper, /expectedHostnames\.has/);
   assert.match(helper, /AbortSignal\.timeout\(10_000\)/);
+  assert.match(loginPage, /host !== "login\.corecaresystems\.co\.uk"/);
+  assert.match(loginPage, /redirect\(destination\.toString\(\)\)/);
+  assert.match(config, /"pattern": "login\.corecaresystems\.co\.uk"/);
+  assert.doesNotMatch(config, /"pattern": "www\.corecaresystems\.co\.uk"/);
   assert.match(config, /TURNSTILE_HOSTNAMES/);
   assert.doesNotMatch(config, /TURNSTILE_SECRET/);
 });

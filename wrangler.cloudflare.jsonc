@@ -4,8 +4,6 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "corecaresystems.co.uk", "custom_domain": true },
-    { "pattern": "www.corecaresystems.co.uk", "custom_domain": true },
     { "pattern": "login.corecaresystems.co.uk", "custom_domain": true }
   ],
   "main": "./dist/server/index.js",
