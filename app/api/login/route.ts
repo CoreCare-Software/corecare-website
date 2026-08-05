@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { getProduct, type ProductCode } from "../../products";
 import { readJsonObject } from "../_shared/body";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../_shared/forms";
+import { turnstileRejected, verifyTurnstile } from "../_shared/turnstile";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max = 1024) => String(value ?? "").trim().slice(0, max);
@@ -34,10 +35,11 @@ function targetFor(match: BrokerMatch) {
 
 export async function POST(request: Request) {
   if (!validSameOriginRequest(request)) return Response.json({ error: "This sign-in request could not be verified." }, { status: 403 });
-  const rate = await allowFormRequest(request, "login-portal", 10, 15);
-  if (!rate.allowed) return Response.json({ error: "Too many sign-in attempts were made from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
   const parsed = await readJsonObject(request, 8_192);
   if (!parsed.ok) return parsed.response;
+  if (!await verifyTurnstile(request, parsed.value.turnstileToken, "login")) return turnstileRejected();
+  const rate = await allowFormRequest(request, "login-portal", 10, 15);
+  if (!rate.allowed) return Response.json({ error: "Too many sign-in attempts were made from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
   const email = clean(parsed.value.email, 320).toLowerCase();
   const password = String(parsed.value.password || "");
   const selected = getProduct(clean(parsed.value.productCode, 20));

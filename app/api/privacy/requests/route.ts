@@ -3,6 +3,7 @@ import { privacyRequests } from "../../../../db/schema";
 import { getProduct } from "../../../products";
 import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../../_shared/forms";
+import { turnstileRejected, verifyTurnstile } from "../../_shared/turnstile";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REQUEST_TYPES = new Set(["access", "correction", "erasure", "restriction", "objection", "portability", "other"]);
@@ -22,11 +23,12 @@ function oneCalendarMonthFrom(date: Date) {
 export async function POST(request: Request) {
   if (!validSameOriginRequest(request)) return Response.json({ error: "This request could not be verified." }, { status: 403 });
   try {
-    const rate = await allowFormRequest(request, "privacy-rights", 4, 30);
-    if (!rate.allowed) return Response.json({ error: "Too many requests were sent from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
     const parsed = await readJsonObject(request, 24_576);
     if (!parsed.ok) return parsed.response;
     const input = parsed.value;
+    if (!await verifyTurnstile(request, input.turnstileToken, "data_rights")) return turnstileRejected();
+    const rate = await allowFormRequest(request, "privacy-rights", 4, 30);
+    if (!rate.allowed) return Response.json({ error: "Too many requests were sent from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
     if (clean(input.website)) return Response.json({ ok: true }, { status: 202 });
 
     const requesterName = clean(input.requesterName);

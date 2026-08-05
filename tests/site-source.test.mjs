@@ -95,3 +95,34 @@ test("includes durable trial, live checkout and one-time product login grants", 
   assert.match(worker, /Strict-Transport-Security/);
   assert.equal(JSON.parse(hosting).d1, "DB");
 });
+
+test("protects every public write form with end-to-end Turnstile validation", async () => {
+  const [widget, helper, loginClient, trialClient, contactClient, rightsClient, loginRoute, trialRoute, contactRoute, rightsRoute, config] = await Promise.all([
+    readFile(new URL("../app/turnstile-widget.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/turnstile.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/trial/trial-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/contact/contact-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/data-rights/data-rights-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/contact/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/privacy/requests/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+  ]);
+  assert.match(widget, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/);
+  assert.match(widget, /window\.turnstile\.reset/);
+  for (const [source, action] of [[loginClient, "login"], [trialClient, "trial"], [contactClient, "contact"], [rightsClient, "data_rights"]]) {
+    assert.match(source, new RegExp(`action="${action}"`));
+    assert.match(source, /turnstileToken/);
+  }
+  for (const [source, action] of [[loginRoute, "login"], [trialRoute, "trial"], [contactRoute, "contact"], [rightsRoute, "data_rights"]]) {
+    assert.match(source, new RegExp(`verifyTurnstile\\(request, .*turnstileToken, "${action}"\\)`));
+  }
+  assert.match(helper, /result\.success === true/);
+  assert.match(helper, /result\.action === expectedAction/);
+  assert.match(helper, /expectedHostnames\.has/);
+  assert.match(helper, /AbortSignal\.timeout\(10_000\)/);
+  assert.match(config, /TURNSTILE_HOSTNAMES/);
+  assert.doesNotMatch(config, /TURNSTILE_SECRET/);
+});

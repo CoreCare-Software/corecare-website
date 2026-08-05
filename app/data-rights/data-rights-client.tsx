@@ -1,28 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { CUSTOMER_PRODUCTS } from "../products";
 import { Arrow } from "../site-chrome";
+import { TurnstileWidget, type TurnstileHandle } from "../turnstile-widget";
 
 type RequestResult = { ok?: boolean; error?: string; reference?: string; dueAt?: string };
 
 export default function DataRightsForm() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RequestResult | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstile = useRef<TurnstileHandle>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!turnstileToken) { setResult({ error: "Complete the security verification and try again." }); return; }
     setBusy(true);
     setResult(null);
     try {
       const form = new FormData(event.currentTarget);
-      const response = await fetch("/api/privacy/requests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form.entries())) });
+      const response = await fetch("/api/privacy/requests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...Object.fromEntries(form.entries()), turnstileToken }) });
       const payload = await response.json() as RequestResult;
       setResult(payload);
       if (payload.ok) event.currentTarget.reset();
     } catch {
       setResult({ error: "We could not save your request. Please try again or email privacy@corecaresystems.co.uk." });
     } finally {
+      turnstile.current?.reset();
       setBusy(false);
     }
   }
@@ -40,8 +45,9 @@ export default function DataRightsForm() {
     </div>
     <p className="form-privacy-note">Do not upload identity documents, passwords, health records or payment details here. We will request proportionate identity evidence separately only if it is needed.</p>
     <label className="consent-row"><input type="checkbox" name="privacyAccepted" value="yes" required /><span>I have read the <Link href="/privacy">privacy notice</Link> and understand how this request will be handled.</span></label>
+    <TurnstileWidget ref={turnstile} action="data_rights" onToken={setTurnstileToken} />
     {result?.error ? <p className="form-message" role="alert" aria-live="assertive">{result.error}</p> : null}
     {result?.ok ? <p className="form-message success" role="status" aria-live="polite">Your request has been recorded as <strong>{result.reference}</strong>. Keep this reference. We will acknowledge it using your email address.</p> : null}
-    <button className="button auth-submit" disabled={busy}>{busy ? "Recording request…" : "Submit privacy request"} <Arrow /></button>
+    <button className="button auth-submit" disabled={busy || !turnstileToken}>{busy ? "Recording request…" : "Submit privacy request"} <Arrow /></button>
   </form>;
 }

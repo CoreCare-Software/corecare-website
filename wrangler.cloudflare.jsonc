@@ -30,7 +30,8 @@
     }
   ],
   "vars": {
-    "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com"
+    "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com",
+    "TURNSTILE_HOSTNAMES": "corecaresystems.co.uk,www.corecaresystems.co.uk,login.corecaresystems.co.uk"
   },
   "d1_databases": [
     {
