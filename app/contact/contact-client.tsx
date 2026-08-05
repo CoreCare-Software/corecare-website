@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { PRODUCTS } from "../products";
+import { CUSTOMER_PRODUCTS as PRODUCTS } from "../products";
 import { Arrow, MarketingShell } from "../site-chrome";
 
 type ContactResult = { ok?: boolean; error?: string; reference?: string };

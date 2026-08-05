@@ -1,0 +1,18 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Arrow, MarketingShell } from "../site-chrome";
+
+export const metadata: Metadata = {
+  title: "Support and onboarding",
+  description: "How CoreCare handles onboarding, account help, product support, incidents and data requests.",
+  alternates: { canonical: "/support" },
+};
+
+export default function SupportPage() {
+  return <MarketingShell>
+    <section className="content-hero"><div className="site-shell narrow-heading"><p className="eyebrow">Support and onboarding</p><h1>A clear route to the right kind of help.</h1><p className="content-lead">From evaluating a product to resolving an access or security concern, CoreCare keeps support requests connected to the relevant organisation and workspace.</p></div></section>
+    <section className="section"><div className="site-shell support-grid"><article><span>01</span><h2>Account access</h2><p>Use the secure help form if you have forgotten a password or cannot reach a product. We verify the requester before discussing an account or changing access.</p><Link href="/account-help">Request account help <Arrow /></Link></article><article><span>02</span><h2>Product support</h2><p>Existing customers should use their agreed support route and include the product, affected workflow, time of the issue and a safe description. Never send passwords or sensitive records by ordinary email.</p><Link href="/contact">Send a general enquiry <Arrow /></Link></article><article><span>03</span><h2>Security concerns</h2><p>Potential vulnerabilities or suspected account compromise are handled separately from general enquiries so the issue can be contained and assessed.</p><a href="mailto:security@corecaresystems.co.uk">Email the security team <Arrow /></a></article></div></section>
+    <section className="section process-section"><div className="site-shell"><div className="section-heading split-heading"><div><p className="eyebrow">Onboarding</p><h2>Prepare, validate, then go live.</h2></div><p>The exact plan depends on the product, data and integrations. Scope, responsibilities and support targets are confirmed in the customer order and onboarding plan.</p></div><div className="process-grid"><article><span>01</span><h3>Map the workflow</h3><p>Identify users, responsibilities, critical records and the day-to-day process.</p></article><article><span>02</span><h3>Assess data</h3><p>Review source quality, sensitivity, ownership and the validation needed after migration.</p></article><article><span>03</span><h3>Configure and train</h3><p>Prepare roles and workflows, then train the people responsible for approving live use.</p></article><article><span>04</span><h3>Readiness review</h3><p>Check access, core scenarios and agreed support routes before production launch.</p></article></div></div></section>
+    <section className="section"><div className="site-shell evidence-grid"><article><p className="eyebrow">Service expectations</p><h2>Confirmed, not assumed.</h2><p>Support availability, response targets, recovery objectives, backup arrangements and any out-of-hours cover are defined for the service being purchased. CoreCare does not present every product as having identical or round-the-clock cover unless it is agreed.</p></article><article><p className="eyebrow">Data requests</p><h2>Access, export and deletion.</h2><p>For product records, contact your organisation’s administrator first because the customer normally decides how that data is used. Website privacy requests can be sent to <a href="mailto:privacy@corecaresystems.co.uk">privacy@corecaresystems.co.uk</a>.</p></article></div></section>
+  </MarketingShell>;
+}

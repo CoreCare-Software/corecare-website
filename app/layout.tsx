@@ -9,12 +9,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = `${protocol}://${host}`;
   return {
     metadataBase: new URL(origin),
-    title: { default: "CoreCare Systems | One Login. Every Product.", template: "%s | CoreCare Systems" },
+    title: { default: "CoreCare Systems | Business software in one place", template: "%s | CoreCare Systems" },
     description: "Discover CoreCare Care, Campsites, Finance, Garage and POS. Explore the suite, start a 30-day trial and access every CoreCare product from one place.",
     applicationName: "CoreCare Systems",
     alternates: { canonical: "/" },
-    openGraph: { type: "website", title: "One front door. Every CoreCare product.", description: "Focused business software for care, campsites, finance, garages and hospitality — connected as one CoreCare ecosystem.", url: origin, siteName: "CoreCare Systems", images: [{ url: `${origin}/og.png`, width: 1730, height: 909, alt: "CoreCare Systems product suite" }] },
-    twitter: { card: "summary_large_image", title: "CoreCare Systems", description: "One front door. Every CoreCare product.", images: [`${origin}/og.png`] },
+    openGraph: { type: "website", title: "CoreCare Systems | Business software in one place", description: "Focused business software for care, campsites, finance, garages and hospitality, with guided trials and onboarding.", url: origin, siteName: "CoreCare Systems", images: [{ url: `${origin}/og.png`, width: 1730, height: 909, alt: "CoreCare Systems customer product suite" }] },
+    twitter: { card: "summary_large_image", title: "CoreCare Systems", description: "Focused business software, guided trials and one clear place to begin.", images: [`${origin}/og.png`] },
   };
 }
 

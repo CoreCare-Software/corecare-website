@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { PRODUCTS } from "../products";
+import { CUSTOMER_PRODUCTS, PRODUCTS } from "../products";
 import { Brand } from "../site-chrome";
 
 type ProductChoice = { code: string; name: string };
@@ -17,6 +17,7 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
   const [directUrl, setDirectUrl] = useState("");
   const [choices, setChoices] = useState<ProductChoice[]>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const ownerSelected = product === "PLATFORM";
 
   function handoff(url: string, email: string, password: string) {
@@ -76,18 +77,17 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
         </div> : <>
           <form onSubmit={submit}>
             <label className="form-label">Work email<input type="email" name="email" autoComplete="username" required /></label>
-            <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{PRODUCTS.filter((item) => item.code !== "PLATFORM").map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
-            <label className="form-label">Password<span className="password-field"><input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Hide" : "Show"}</button></span></label>
+            <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{CUSTOMER_PRODUCTS.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
+            <label className="form-label">Password<span className="password-field"><input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" aria-describedby={capsLock ? "caps-lock-note" : undefined} onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))} onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))} onBlur={() => setCapsLock(false)} required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Hide" : "Show"}</button></span>{capsLock ? <small id="caps-lock-note" className="field-note" role="status">Caps Lock is on.</small> : null}</label>
             {message ? <div className="form-message" role="alert" aria-live="assertive"><p>{message}</p>{directUrl ? <a href={directUrl}>Open this product’s current login.</a> : null}</div> : null}
             {choices.length ? <fieldset className="login-choices"><legend>Choose a valid workspace</legend>{choices.map((choice) => <button type="button" key={choice.code} onClick={() => { setProduct(choice.code); setMessage("Workspace selected. Continue to sign in."); setChoices([]); }}>{choice.name}<span aria-hidden="true">→</span></button>)}</fieldset> : null}
             <button className="button auth-submit" disabled={busy}>{busy ? "Checking your account…" : "Continue to my product"} <span aria-hidden="true">↗</span></button>
-            <div className="form-help"><a href="mailto:support@corecaresystems.co.uk?subject=CoreCare%20login%20help">Forgotten password or need help?</a><span>Never share your password by email.</span></div>
+            <div className="form-help"><Link href="/account-help">Forgotten password or need help?</Link><span>Never share your password by email.</span></div>
           </form>
-          <button className="secondary-button auth-submit" type="button" onClick={() => setProduct("PLATFORM")}>I’m a CoreCare platform owner</button>
         </>}
       </div>
       <Link className="auth-back" href="/">← Back to CoreCare Systems</Link>
     </section>
-    <section className="auth-visual"><div className="auth-visual-content"><p className="eyebrow light-eyebrow">One place to begin</p><h2>The right product.<br />Without the hunt.</h2><p>Only a product that accepts your registered credentials can become a login destination.</p><div className="auth-product-list">{PRODUCTS.slice(0, 4).map((item) => <article key={item.code}><i>{item.icon}</i><strong>{item.name}</strong></article>)}</div></div></section>
+    <section className="auth-visual"><div className="auth-visual-content"><p className="eyebrow light-eyebrow">One place to begin</p><h2>The right product.<br />Without the hunt.</h2><p>Only a product that accepts your registered credentials can become a login destination.</p><div className="auth-product-list">{CUSTOMER_PRODUCTS.map((item) => <article key={item.code}><i>{item.icon}</i><strong>{item.name}</strong></article>)}</div></div></section>
   </main>;
 }

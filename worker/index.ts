@@ -28,6 +28,10 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if (url.hostname === "corecaresystems.co.uk") {
+      url.hostname = "www.corecaresystems.co.uk";
+      return withProductionHeaders(request, Response.redirect(url.toString(), 308));
+    }
     let response: Response;
 
     if (url.pathname === "/_vinext/image") {
