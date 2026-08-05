@@ -10,7 +10,7 @@ export const COMPANY_DETAILS = {
   telephoneHref: "+447983408588",
   companyNumber: null,
   vatNumber: null,
-  icoRegistrationNumber: null,
+  icoRegistrationNumber: "C1999522",
 } as const;
 
 export const COMPANY_ADDRESS = `${COMPANY_DETAILS.addressLine1}, ${COMPANY_DETAILS.addressLine2}, ${COMPANY_DETAILS.locality}, ${COMPANY_DETAILS.postTown}, ${COMPANY_DETAILS.postcode}`;

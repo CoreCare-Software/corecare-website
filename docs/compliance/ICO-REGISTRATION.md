@@ -1,6 +1,8 @@
-# ICO data protection fee registration preparation
+# ICO data protection fee registration record
 
-Status: registration not yet submitted; no fee has been authorised.
+Status: registration completed on 5 August 2026. ICO registration reference: `C1999522`.
+
+The ICO says a new registration can take up to seven working days after payment to appear on the public register. The public entry was not yet visible when checked on 5 August 2026.
 
 CoreCare Systems appears to act as controller for website enquiries, customer contacts, trial administration, account security, support and its own business records. That means the owner should complete the ICO fee self-assessment and, unless an exemption applies, register and pay the applicable annual fee. Being a processor for customer product records does not remove CoreCare’s separate controller activities.
 
@@ -11,14 +13,12 @@ CoreCare Systems appears to act as controller for website enquiries, customer co
 - Public telephone: 07983 408588
 - Company number: none
 - VAT registration: not VAT registered
-- Current ICO number: none
+- ICO registration reference: C1999522
 
-## Required from the owner before submission
+## Renewal and record keeping
 
-- Legal name of the individual or entity that trades as CoreCare Systems, and confirmation of legal form (for example sole trader or partnership).
-- Registration correspondence email and whether the trading address may be used for correspondence.
-- Number of staff and annual turnover/balance-sheet band needed for the fee tier.
-- Confirmation of processing purposes and whether any exemption is claimed after using the ICO self-assessment.
-- Explicit approval of the fee before payment. No payment or recurring card/direct-debit authority may be created without that approval.
-
-After registration, update `COMPANY_DETAILS.icoRegistrationNumber`, `/legal`, `/privacy`, the DPA and customer order template with the issued number and renewal owner/date.
+- Keep the ICO confirmation and certificate with the compliance records.
+- Record the expiry and renewal date from the certificate when the public entry becomes available.
+- Assign an owner to review the registration details and fee tier before each annual renewal.
+- Update the registration promptly if the controller name, address, contact or trading names change.
+- Confirm that new customer order templates include the registration reference.
