@@ -9,7 +9,8 @@ test("ships the CoreCare showcase and product suite", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
   assert.match(home, /One front door/);
-  for (const name of ["CoreCare Care", "CoreCare Campsites", "CoreCare Finance", "CoreCare Garage", "CoreCare POS", "CoreCare Owner Platform"]) assert.match(products, new RegExp(name));
+  for (const name of ["CoreCare Care", "CoreCare Campsites", "CoreCare Finance", "CoreCare Garage", "CoreCare POS"]) assert.match(products, new RegExp(name));
+  assert.doesNotMatch(products, /Owner Platform|PLATFORM/);
   assert.match(styles, /@media\(max-width:760px\)/);
 });
 
@@ -21,10 +22,11 @@ test("includes interactive visual workflows for every CoreCare product", async (
     readFile(new URL("../app/site-chrome.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /See every CoreCare product in action/);
+  assert.match(page, /See every customer product in action/);
   assert.match(client, /role="tabpanel"/);
   assert.match(client, /Representative demonstration/);
-  for (const code of ["CARE", "CAMPSITE", "FINANCE", "GARAGE", "POS", "PLATFORM"]) assert.match(demos, new RegExp(`${code}:`));
+  for (const code of ["CARE", "CAMPSITE", "FINANCE", "GARAGE", "POS"]) assert.match(demos, new RegExp(`${code}:`));
+  assert.doesNotMatch(`${page}\n${client}\n${demos}`, /Owner Platform|private owner|owner command|PLATFORM/);
   assert.match(navigation, /href="\/demos"/);
   assert.match(sitemap, /"\/demos"/);
 });

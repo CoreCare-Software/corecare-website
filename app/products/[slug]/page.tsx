@@ -11,7 +11,7 @@ export function generateStaticParams() { return CUSTOMER_PRODUCTS.map((product) 
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const product = getProductBySlug((await params).slug);
-  if (!product || product.code === "PLATFORM") return {};
+  if (!product) return {};
   const detail = PRODUCT_DETAILS[product.code];
   return {
     title: detail.seoTitle,
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const product = getProductBySlug((await params).slug);
-  if (!product || product.code === "PLATFORM") notFound();
+  if (!product) notFound();
   const detail = PRODUCT_DETAILS[product.code];
   const baseUrl = "https://www.corecaresystems.co.uk";
   const structuredData = [

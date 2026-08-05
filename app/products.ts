@@ -1,4 +1,4 @@
-export type ProductCode = "CARE" | "CAMPSITE" | "FINANCE" | "GARAGE" | "POS" | "PLATFORM";
+export type ProductCode = "CARE" | "CAMPSITE" | "FINANCE" | "GARAGE" | "POS";
 
 export type CoreCareProduct = {
   code: ProductCode;
@@ -60,17 +60,9 @@ export const PRODUCTS: CoreCareProduct[] = [
     availability: "Guided trial available", availabilityDetail: "Till and kitchen workflows can be demonstrated now. Hardware, card-terminal and payment-provider compatibility are confirmed before installation.",
     metric: { value: "£1,284", label: "Sales today", detail: "42 orders served" },
   },
-  {
-    code: "PLATFORM", slug: "owner-platform", name: "CoreCare Owner Platform", shortName: "Owner Platform", eyebrow: "CoreCare operations",
-    description: "The protected owner command centre for customers, product health, support, entitlements and commercial oversight.",
-    features: ["Customer overview", "Product health", "Support & entitlements"], accent: "#132c3f", soft: "#e5ebef", icon: "OP",
-    liveUrl: "https://corecare-platform.cselectricalservices11.workers.dev", intendedHostname: "platform.corecaresystems.co.uk", trialAvailable: false,
-    availability: "Private internal service", availabilityDetail: "Access is restricted to authorised CoreCare operators and is not offered as a customer product.",
-    metric: { value: "6", label: "Products connected", detail: "Owner access only" },
-  },
 ];
 
-export const CUSTOMER_PRODUCTS = PRODUCTS.filter((product) => product.code !== "PLATFORM");
+export const CUSTOMER_PRODUCTS = PRODUCTS;
 export const TRIAL_PRODUCTS = CUSTOMER_PRODUCTS.filter((product) => product.trialAvailable);
 export function getProduct(code: string | null | undefined) { return PRODUCTS.find((product) => product.code === String(code || "").toUpperCase()); }
 export function getProductBySlug(slug: string | null | undefined) { return PRODUCTS.find((product) => product.slug === String(slug || "").toLowerCase()); }

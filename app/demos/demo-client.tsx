@@ -53,7 +53,7 @@ export default function DemoClient() {
 
   return <>
     <div className="visual-product-tabs" role="tablist" aria-label="Choose a CoreCare product demonstration">
-      {PRODUCTS.map((item, index) => <button id={`visual-product-${item.code}`} type="button" role="tab" aria-selected={item.code === product.code} tabIndex={item.code === product.code ? 0 : -1} key={item.code} className={item.code === product.code ? "active" : ""} onKeyDown={(event) => moveProductTab(event, index)} onClick={() => selectProduct(item)} style={{ "--product-accent": item.accent, "--product-soft": item.soft } as React.CSSProperties}><i>{item.icon}</i><span>{item.shortName}<small>{item.code === "PLATFORM" ? "Private owner view" : item.eyebrow}</small></span></button>)}
+      {PRODUCTS.map((item, index) => <button id={`visual-product-${item.code}`} type="button" role="tab" aria-selected={item.code === product.code} tabIndex={item.code === product.code ? 0 : -1} key={item.code} className={item.code === product.code ? "active" : ""} onKeyDown={(event) => moveProductTab(event, index)} onClick={() => selectProduct(item)} style={{ "--product-accent": item.accent, "--product-soft": item.soft } as React.CSSProperties}><i>{item.icon}</i><span>{item.shortName}<small>{item.eyebrow}</small></span></button>)}
     </div>
 
     <section className="visual-demo-intro" style={{ "--product-accent": product.accent, "--product-soft": product.soft } as React.CSSProperties}>

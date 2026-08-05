@@ -13,7 +13,7 @@ export type ProductDetail = {
   faqs: { question: string; answer: string }[];
 };
 
-export const PRODUCT_DETAILS: Record<Exclude<ProductCode, "PLATFORM">, ProductDetail> = {
+export const PRODUCT_DETAILS: Record<ProductCode, ProductDetail> = {
   CARE: {
     seoTitle: "Care management software for UK care teams",
     audience: "For domiciliary and community care teams that need care records, visits, medication and oversight in one workspace.",

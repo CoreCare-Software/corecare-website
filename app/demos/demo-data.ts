@@ -200,40 +200,4 @@ export const PRODUCT_DEMOS: Record<ProductCode, ProductDemo> = {
       },
     ],
   },
-  PLATFORM: {
-    code: "PLATFORM",
-    promise: "Give the CoreCare owner one protected view of customers, products and operational risk.",
-    audience: "A representative internal workflow. The Owner Platform is not a customer product and remains access restricted.",
-    nav: ["Portfolio", "Customers", "Products", "Subscriptions", "Support", "Compliance"],
-    capabilities: [
-      { title: "Customer overview", detail: "See organisations, enabled products, contacts and service position together." },
-      { title: "Entitlements", detail: "Control which organisation can access which product and subscription state." },
-      { title: "Product health", detail: "Review product versions, operational signals and outstanding actions." },
-      { title: "Support and compliance", detail: "Track support, privacy requests, incidents, legal holds and accountable actions." },
-    ],
-    views: [
-      {
-        label: "Oversee the portfolio", title: "Owner command centre", description: "Start with product health, customer activity and the exceptions that need ownership.", action: "Add customer",
-        metrics: [{ label: "Connected products", value: "6", detail: "All reporting" }, { label: "Customer accounts", value: "73", detail: "69 active" }, { label: "Open actions", value: "8", detail: "Two high priority" }],
-        boardTitle: "Product portfolio", boardHint: "Private owner view",
-        rows: [{ title: "CoreCare Care", meta: "Production · v1.33.0", status: "Healthy", tone: "good" }, { title: "CoreCare POS", meta: "Production · v1.4.0", status: "Healthy", tone: "good" }, { title: "CoreCare Garage", meta: "Production · v0.8.0", status: "Review release", tone: "attention" }],
-        activityTitle: "Owner activity", activity: [{ time: "10:31", title: "Customer activated", detail: "Care · Greenfield Support" }, { time: "10:08", title: "Product status updated", detail: "Finance · release healthy" }, { time: "09:42", title: "Support case assigned", detail: "Priority response" }],
-      },
-      {
-        label: "Manage access", title: "Subscriptions and entitlements", description: "Keep subscription state and product access aligned without sharing customer sessions.", action: "Grant entitlement",
-        metrics: [{ label: "Active products", value: "86", detail: "Across all customers" }, { label: "Trials running", value: "11", detail: "4 ending this week" }, { label: "Access exceptions", value: "2", detail: "Need review" }],
-        boardTitle: "Customer entitlement review", boardHint: "Greenfield Support",
-        rows: [{ title: "CoreCare Care", meta: "18 authorised users · paid", status: "Active", tone: "good" }, { title: "CoreCare Finance", meta: "Trial · 9 days remaining", status: "Trial", tone: "neutral" }, { title: "CoreCare POS", meta: "Not included in order", status: "No access", tone: "attention" }],
-        activityTitle: "Commercial trail", activity: [{ time: "10:42", title: "Trial extended", detail: "Owner approval recorded" }, { time: "10:17", title: "Entitlement checked", detail: "Care · 18 users" }, { time: "09:55", title: "Order linked", detail: "Signed customer schedule" }],
-      },
-      {
-        label: "Control risk", title: "Compliance and support", description: "Keep privacy requests, security events and accountable follow-up in one register.", action: "Open case",
-        metrics: [{ label: "Privacy requests", value: "3", detail: "None overdue" }, { label: "Security cases", value: "1", detail: "Contained" }, { label: "Support SLA", value: "98%", detail: "This month" }],
-        boardTitle: "Operational registers", boardHint: "Least-privilege owner access",
-        rows: [{ title: "Subject access request · SAR-2026-014", meta: "Identity checked · due 26 Aug", status: "In progress", tone: "neutral" }, { title: "Security event · SEC-2026-007", meta: "Contained · impact assessment", status: "Review", tone: "attention" }, { title: "Retention review · Finance", meta: "Quarterly evidence complete", status: "Complete", tone: "good" }],
-        activityTitle: "Accountability log", activity: [{ time: "11:04", title: "Case note added", detail: "Decision and evidence recorded" }, { time: "10:36", title: "Legal hold checked", detail: "No affected records" }, { time: "10:02", title: "Request owner assigned", detail: "Due-date reminder active" }],
-      },
-    ],
-  },
 };
-

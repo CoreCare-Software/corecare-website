@@ -50,14 +50,13 @@ export async function POST(request: Request) {
   if (!rate.allowed) return Response.json({ error: "Too many sign-in attempts were made from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
 
   if (selected) {
-    if (selected.code === "PLATFORM") return Response.json({ error: "The Owner Platform uses an additional protected access check.", directUrl: selected.liveUrl }, { status: 409, headers: { "cache-control": "no-store" } });
     const result = await checkCredentials(selected, email, password);
     await recordEvent("login_check", { productCode: selected.code, path: "/login", outcome: result.valid ? "valid" : String(result.status) });
     if (!result.valid) return Response.json({ error: result.message, directUrl: result.status === 502 ? result.origin : undefined }, { status: result.status === 429 ? 429 : result.status === 502 ? 502 : 401, headers: { "cache-control": "no-store" } });
     return Response.json({ ok: true, product: { code: selected.code, name: selected.name }, handoffUrl: `${result.origin}/api/auth/portal-login` }, { headers: { "cache-control": "no-store" } });
   }
 
-  const results = await Promise.all(PRODUCTS.filter((product) => product.code !== "PLATFORM").map(async (product) => ({ product, result: await checkCredentials(product, email, password) })));
+  const results = await Promise.all(PRODUCTS.map(async (product) => ({ product, result: await checkCredentials(product, email, password) })));
   const matches = results.filter((entry) => entry.result.valid);
   await recordEvent("login_discovery", { path: "/login", outcome: matches.length === 0 ? "none" : matches.length === 1 ? "single" : "multiple" });
   if (matches.length === 1) {

@@ -12,7 +12,6 @@ function ProductMock({ product, compact = false }: { product: CoreCareProduct; c
     FINANCE: [["Sales invoices", "18 awaiting payment", "£12,840"], ["Bank reconciliation", "Current account · today", "6 to match"], ["VAT position", "Quarter ending September", "On track"]],
     GARAGE: [["AB12 CDE · Full service", "Bay 2 · Liam", "In progress"], ["EF34 GHI · MOT", "Bay 1 · 10:30", "Inspection"], ["JK56 LMN · Brakes", "Parts received", "Ready"]],
     POS: [["Table 12 · 4 covers", "Kitchen · 8 mins", "Cooking"], ["Collection #1042", "2 items · paid", "Ready"], ["Table 7 · 2 covers", "Drinks served", "Open"]],
-    PLATFORM: [["CoreCare Care", "Production · v1.33.0", "Healthy"], ["CoreCare POS", "Production · v1.4.0", "Healthy"], ["CoreCare Garage", "Production · v0.8.0", "Healthy"]],
   };
   return <div className={`product-mock${compact ? " compact-mock" : ""}`} style={{ "--product-accent": product.accent, "--product-soft": product.soft } as React.CSSProperties} role="img" aria-label={`Illustrative ${product.name} workspace using representative data`}>
     <div className="mock-sidebar" aria-hidden="true"><span className="mock-logo">C</span><span className="mock-nav active" /><span className="mock-nav" /><span className="mock-nav" /><span className="mock-nav short" /><span className="mock-avatar" /></div>

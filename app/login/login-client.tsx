@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { CUSTOMER_PRODUCTS, PRODUCTS } from "../products";
+import { CUSTOMER_PRODUCTS } from "../products";
 import { Brand } from "../site-chrome";
 
 type ProductChoice = { code: string; name: string };
 
-const OWNER_URL = PRODUCTS.find((item) => item.code === "PLATFORM")?.liveUrl || "/";
-
 export default function LoginClient({ initialProduct = "", initialError = "" }: { initialProduct?: string; initialError?: string }) {
-  const validInitial = PRODUCTS.some((item) => item.code === initialProduct.toUpperCase()) ? initialProduct.toUpperCase() : "";
+  const validInitial = CUSTOMER_PRODUCTS.some((item) => item.code === initialProduct.toUpperCase()) ? initialProduct.toUpperCase() : "";
   const [product, setProduct] = useState(validInitial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialError);
@@ -18,7 +16,6 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
   const [choices, setChoices] = useState<ProductChoice[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
-  const ownerSelected = product === "PLATFORM";
 
   function handoff(url: string, email: string, password: string) {
     const form = document.createElement("form");
@@ -68,13 +65,8 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
       <Link href="/"><Brand /></Link>
       <div className="auth-form-wrap">
         <p className="eyebrow">Your CoreCare account</p>
-        <h1>{ownerSelected ? "Owner Platform access." : "Good to see you again."}</h1>
-        <p>{ownerSelected ? "The command centre has an additional Cloudflare identity check before the CoreCare account login." : "Use one login page. Your credentials are checked securely by the CoreCare products and you are sent to the valid workspace."}</p>
-        {ownerSelected ? <div className="owner-access-panel">
-          <p>Your password is not entered on this public website. Continue to the protected Owner Platform and complete both secure checks there.</p>
-          <a className="button auth-submit" href={OWNER_URL} referrerPolicy="no-referrer">Continue to Owner Platform <span aria-hidden="true">↗</span></a>
-          <button className="secondary-button auth-submit" type="button" onClick={() => setProduct("")}>Use customer login</button>
-        </div> : <>
+        <h1>Good to see you again.</h1>
+        <p>Use one login page. Your credentials are checked securely by the CoreCare products and you are sent to the valid workspace.</p>
           <form onSubmit={submit}>
             <label className="form-label">Work email<input type="email" name="email" autoComplete="username" required /></label>
             <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{CUSTOMER_PRODUCTS.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
@@ -84,7 +76,6 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
             <button className="button auth-submit" disabled={busy}>{busy ? "Checking your account…" : "Continue to my product"} <span aria-hidden="true">↗</span></button>
             <div className="form-help"><Link href="/account-help">Forgotten password or need help?</Link><span>Never share your password by email.</span></div>
           </form>
-        </>}
       </div>
       <Link className="auth-back" href="/">← Back to CoreCare Systems</Link>
     </section>
