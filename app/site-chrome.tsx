@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { COMPANY_ADDRESS, COMPANY_DETAILS } from "./company-details";
 import { CUSTOMER_PRODUCTS } from "./products";
 
 export function Brand({ inverse = false }: { inverse?: boolean }) {
@@ -38,7 +39,7 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  return <footer><div className="site-shell footer-grid"><div className="footer-brand"><Brand inverse /><p>One family of focused, practical business software.</p></div><div><strong>Products</strong>{CUSTOMER_PRODUCTS.map((product) => <Link key={product.code} href={`/products/${product.slug}`}>{product.shortName}</Link>)}</div><div><strong>Get started</strong><Link href="/trial">30-day free trial</Link><Link href="/plans">Plans</Link><Link href="/login">Customer login</Link><Link href="/account-help">Account help</Link><Link href="/contact">Book a demonstration</Link></div><div><strong>CoreCare Systems</strong><Link href="/support">Support</Link><Link href="/security">Security</Link><Link href="/privacy">Privacy</Link><Link href="/cookies">Cookies</Link><Link href="/terms">Terms</Link><a href="mailto:hello@corecaresystems.co.uk">hello@corecaresystems.co.uk</a><span>United Kingdom</span></div></div><div className="site-shell footer-bottom"><span>© {new Date().getFullYear()} CoreCare Systems</span><span>Built for better working days.</span></div></footer>;
+  return <footer><div className="site-shell footer-grid"><div className="footer-brand"><Brand inverse /><p>One family of focused, practical business software.</p><address>{COMPANY_ADDRESS}</address></div><div><strong>Products</strong>{CUSTOMER_PRODUCTS.map((product) => <Link key={product.code} href={`/products/${product.slug}`}>{product.shortName}</Link>)}</div><div><strong>Get started</strong><Link href="/trial">30-day free trial</Link><Link href="/plans">Plans</Link><Link href="/login">Customer login</Link><Link href="/account-help">Account help</Link><Link href="/contact">Book a demonstration</Link></div><div><strong>CoreCare Systems</strong><Link href="/support">Support</Link><Link href="/security">Security</Link><Link href="/privacy">Privacy</Link><Link href="/cookies">Cookies</Link><Link href="/terms">Terms</Link><Link href="/legal">Legal information</Link><a href={`tel:${COMPANY_DETAILS.telephoneHref}`}>{COMPANY_DETAILS.telephoneDisplay}</a><a href="mailto:hello@corecaresystems.co.uk">hello@corecaresystems.co.uk</a></div></div><div className="site-shell footer-bottom"><span>© {new Date().getFullYear()} {COMPANY_DETAILS.legalName}</span><span>Built for better working days.</span></div></footer>;
 }
 
 export function MarketingShell({ children }: { children: ReactNode }) {

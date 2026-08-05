@@ -47,3 +47,4 @@ footer{padding:70px 0 24px;background:#091c24;color:#fff}.footer-grid{display:gr
 @media(max-width:1050px){.process-grid,.onboarding-grid{grid-template-columns:1fr 1fr}.support-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.process-grid,.onboarding-grid,.evidence-grid,.support-grid{grid-template-columns:1fr}.process-actions{display:grid}.availability-badge{width:auto}.legal-table-wrap{margin-right:-6px}.nav-shell nav a{width:100%}}
 @media(max-width:380px){.connection-map:before{width:270px;height:270px}.connection-map:after{width:185px;height:185px}.connection-centre{width:125px;height:125px}.connection-product{width:88px;padding:9px}.connection-product i{width:27px;height:27px}.connection-product span{font-size:.58rem}.connection-4{left:36%}}
+.footer-brand address{max-width:300px;color:#718a91;font-size:.68rem;font-style:normal;line-height:1.6}.legal-copy address{color:#53615e;font-style:normal;line-height:1.8}
