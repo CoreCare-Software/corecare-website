@@ -54,6 +54,10 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
         body: JSON.stringify({ ...Object.fromEntries(form.entries()), turnstileToken }),
       });
       const result = await response.json() as { ok?: boolean; handoffUrl?: string; grant?: string; error?: string; directUrl?: string; products?: ProductChoice[] };
+      if (result.ok && result.directUrl) {
+        window.location.assign(result.directUrl);
+        return;
+      }
       if (result.ok && result.handoffUrl && result.grant) {
         handoff(result.handoffUrl, result.grant);
         return;

@@ -44,6 +44,10 @@ export async function POST(request: Request) {
   const password = String(parsed.value.password || "");
   const selected = getProduct(clean(parsed.value.productCode, 20));
   if (!EMAIL_PATTERN.test(email) || !password || password.length > 1_024) return Response.json({ error: "Enter your email address and password." }, { status: 400 });
+  if (!selected && ownerEmailAllowed(email)) return Response.json({
+    ok: true,
+    directUrl: "https://owner.corecaresystems.co.uk/",
+  }, { headers: { "cache-control": "no-store" } });
 
   const runtime = env as unknown as { CORECARE_PLATFORM?: BrokerBinding };
   if (!runtime.CORECARE_PLATFORM?.fetch) return Response.json({ error: "The CoreCare login service is not configured." }, { status: 503 });
@@ -56,7 +60,7 @@ export async function POST(request: Request) {
         email,
         password,
         requestedProduct: selected?.code || "",
-        includePlatform: ownerEmailAllowed(email),
+        includePlatform: false,
         ip: clean(request.headers.get("cf-connecting-ip"), 64),
         userAgent: clean(request.headers.get("user-agent"), 250),
       }),
