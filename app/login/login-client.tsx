@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 import { CUSTOMER_PRODUCTS } from "../products";
 import { Brand } from "../site-chrome";
 
-type ProductChoice = { code: string; name: string };
+type ProductChoice = { code: string; name: string; handoffUrl?: string };
 
 export default function LoginClient({ initialProduct = "", initialError = "" }: { initialProduct?: string; initialError?: string }) {
   const validInitial = CUSTOMER_PRODUCTS.some((item) => item.code === initialProduct.toUpperCase()) ? initialProduct.toUpperCase() : "";
@@ -72,7 +72,17 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
             <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{CUSTOMER_PRODUCTS.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
             <label className="form-label">Password<span className="password-field"><input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" aria-describedby={capsLock ? "caps-lock-note" : undefined} onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))} onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))} onBlur={() => setCapsLock(false)} required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Hide" : "Show"}</button></span>{capsLock ? <small id="caps-lock-note" className="field-note" role="status">Caps Lock is on.</small> : null}</label>
             {message ? <div className="form-message" role="alert" aria-live="assertive"><p>{message}</p>{directUrl ? <a href={directUrl}>Open this product’s current login.</a> : null}</div> : null}
-            {choices.length ? <fieldset className="login-choices"><legend>Choose a valid workspace</legend>{choices.map((choice) => <button type="button" key={choice.code} onClick={() => { setProduct(choice.code); setMessage("Workspace selected. Continue to sign in."); setChoices([]); }}>{choice.name}<span aria-hidden="true">→</span></button>)}</fieldset> : null}
+            {choices.length ? <fieldset className="login-choices"><legend>Choose a valid workspace</legend>{choices.map((choice) => <button type="button" key={choice.code} onClick={(event) => {
+              const loginForm = event.currentTarget.form;
+              if (choice.handoffUrl && loginForm) {
+                const loginData = new FormData(loginForm);
+                handoff(choice.handoffUrl, String(loginData.get("email") || ""), String(loginData.get("password") || ""));
+                return;
+              }
+              setProduct(choice.code);
+              setMessage("Workspace selected. Continue to sign in.");
+              setChoices([]);
+            }}>{choice.name}<span aria-hidden="true">→</span></button>)}</fieldset> : null}
             <button className="button auth-submit" disabled={busy}>{busy ? "Checking your account…" : "Continue to my product"} <span aria-hidden="true">↗</span></button>
             <div className="form-help"><Link href="/account-help">Forgotten password or need help?</Link><span>Never share your password by email.</span></div>
           </form>

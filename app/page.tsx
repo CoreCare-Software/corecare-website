@@ -1,7 +1,12 @@
 import HomeClient from "./home-client";
 import { COMPANY_DETAILS } from "./company-details";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home() {
+  const requestHeaders = await headers();
+  const host = (requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "").split(":", 1)[0].toLowerCase();
+  if (host === "login.corecaresystems.co.uk") redirect("/login");
   const structuredData = [{
     "@context": "https://schema.org",
     "@type": "Organization",
