@@ -59,8 +59,8 @@ test("includes interactive visual workflows for every CoreCare product", async (
   assert.match(sitemap, /"\/demos"/);
 });
 
-test("includes durable trial, live checkout and product-owned login handoffs", async () => {
-  const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, worker, hosting] = await Promise.all([
+test("includes durable trial, live checkout and one-time product login grants", async () => {
+  const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, loginClient, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/activate/route.ts", import.meta.url), "utf8"),
@@ -69,6 +69,7 @@ test("includes durable trial, live checkout and product-owned login handoffs", a
     readFile(new URL("../app/trial/status/status-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/plans/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
@@ -84,7 +85,11 @@ test("includes durable trial, live checkout and product-owned login handoffs", a
   assert.match(statusClient, /Activate my 30-day trial/);
   assert.match(statusClient, /Secure live checkout/);
   assert.doesNotMatch(plansPage, /currently being verified in Stripe test mode/);
-  assert.match(loginRoute, /\/auth\/portal-login/);
+  assert.match(loginRoute, /\/auth\/portal-claim/);
+  assert.match(loginRoute, /portal-broker\.internal/);
+  assert.match(loginClient, /Object\.entries\(\{ grant, returnTo/);
+  assert.doesNotMatch(loginClient, /Object\.entries\(\{ email, password/);
+  assert.doesNotMatch(loginRoute, /workers\.dev/);
   assert.doesNotMatch(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /Strict-Transport-Security/);

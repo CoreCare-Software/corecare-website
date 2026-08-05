@@ -1,6 +1,6 @@
 # ICO data protection fee registration record
 
-Status: registration completed on 5 August 2026. ICO registration reference: `C1999522`.
+Status: registration completed on 5 August 2026. Public ICO registration number: `00015031228`.
 
 The ICO says a new registration can take up to seven working days after payment to appear on the public register. The public entry was not yet visible when checked on 5 August 2026.
 
@@ -13,7 +13,8 @@ CoreCare Systems appears to act as controller for website enquiries, customer co
 - Public telephone: 07983 408588
 - Company number: none
 - VAT registration: not VAT registered
-- ICO registration reference: C1999522
+- ICO application reference: C1999522
+- Public ICO registration number: 00015031228
 
 ## Renewal and record keeping
 

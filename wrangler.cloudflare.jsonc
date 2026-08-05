@@ -1,12 +1,36 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "corecare-website",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "corecaresystems.co.uk", "custom_domain": true },
+    { "pattern": "www.corecaresystems.co.uk", "custom_domain": true },
+    { "pattern": "login.corecaresystems.co.uk", "custom_domain": true }
+  ],
   "main": "./dist/server/index.js",
   "compatibility_date": "2026-08-05",
   "compatibility_flags": ["nodejs_compat"],
   "no_bundle": true,
   "assets": {
     "directory": "./dist/client"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+  "services": [
+    {
+      "binding": "CORECARE_PLATFORM",
+      "service": "corecare-platform",
+      "entrypoint": "PortalBroker"
+    },
+    {
+      "binding": "CORECARE_PLATFORM_AUTOMATION",
+      "service": "corecare-platform"
+    }
+  ],
+  "vars": {
+    "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com"
   },
   "d1_databases": [
     {

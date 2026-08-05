@@ -1,6 +1,7 @@
 import { getDb } from "../../../../db";
 import { privacyRequests } from "../../../../db/schema";
 import { getProduct } from "../../../products";
+import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../../_shared/forms";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,11 +21,12 @@ function oneCalendarMonthFrom(date: Date) {
 
 export async function POST(request: Request) {
   if (!validSameOriginRequest(request)) return Response.json({ error: "This request could not be verified." }, { status: 403 });
-  if (Number(request.headers.get("content-length") || 0) > 24_576) return Response.json({ error: "This request is too large." }, { status: 413 });
   try {
     const rate = await allowFormRequest(request, "privacy-rights", 4, 30);
     if (!rate.allowed) return Response.json({ error: "Too many requests were sent from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
-    const input = await request.json() as Record<string, unknown>;
+    const parsed = await readJsonObject(request, 24_576);
+    if (!parsed.ok) return parsed.response;
+    const input = parsed.value;
     if (clean(input.website)) return Response.json({ ok: true }, { status: 202 });
 
     const requesterName = clean(input.requesterName);

@@ -2,23 +2,6 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
-interface Env {
-  ASSETS: Fetcher;
-  DB: D1Database;
-  IMAGES: {
-    input(stream: ReadableStream): {
-      transform(options: Record<string, unknown>): {
-        output(options: { format: string; quality: number }): Promise<{ response(): Response }>;
-      };
-    };
-  };
-}
-
-interface ExecutionContext {
-  waitUntil(promise: Promise<unknown>): void;
-  passThroughOnException(): void;
-}
-
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -60,12 +43,12 @@ function withProductionHeaders(request: Request, response: Response) {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    "form-action 'self' https://*.workers.dev https://*.corecaresystems.co.uk",
+    "form-action 'self' https://*.corecaresystems.co.uk",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
-    "connect-src 'self' https://*.workers.dev https://*.corecaresystems.co.uk https://challenges.cloudflare.com",
+    "connect-src 'self' https://*.corecaresystems.co.uk https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
   ];
   if (production) directives.push("upgrade-insecure-requests");

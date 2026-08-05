@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 import { CUSTOMER_PRODUCTS } from "../products";
 import { Brand } from "../site-chrome";
 
-type ProductChoice = { code: string; name: string; handoffUrl?: string };
+type ProductChoice = { code: string; name: string; handoffUrl?: string; grant?: string };
 
 export default function LoginClient({ initialProduct = "", initialError = "" }: { initialProduct?: string; initialError?: string }) {
   const validInitial = CUSTOMER_PRODUCTS.some((item) => item.code === initialProduct.toUpperCase()) ? initialProduct.toUpperCase() : "";
@@ -17,12 +17,12 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
 
-  function handoff(url: string, email: string, password: string) {
+  function handoff(url: string, grant: string) {
     const form = document.createElement("form");
     form.method = "POST";
     form.action = url;
     form.hidden = true;
-    for (const [name, value] of Object.entries({ email, password, returnTo: "/" })) {
+    for (const [name, value] of Object.entries({ grant, returnTo: "/" })) {
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = name;
@@ -46,9 +46,9 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
         headers: { "content-type": "application/json" },
         body: JSON.stringify(Object.fromEntries(form.entries())),
       });
-      const result = await response.json() as { ok?: boolean; handoffUrl?: string; error?: string; directUrl?: string; products?: ProductChoice[] };
-      if (result.ok && result.handoffUrl) {
-        handoff(result.handoffUrl, String(form.get("email") || ""), String(form.get("password") || ""));
+      const result = await response.json() as { ok?: boolean; handoffUrl?: string; grant?: string; error?: string; directUrl?: string; products?: ProductChoice[] };
+      if (result.ok && result.handoffUrl && result.grant) {
+        handoff(result.handoffUrl, result.grant);
         return;
       }
       setMessage(result.error || "We could not sign you in.");
@@ -74,9 +74,8 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
             {message ? <div className="form-message" role="alert" aria-live="assertive"><p>{message}</p>{directUrl ? <a href={directUrl}>Open this product’s current login.</a> : null}</div> : null}
             {choices.length ? <fieldset className="login-choices"><legend>Choose a valid workspace</legend>{choices.map((choice) => <button type="button" key={choice.code} onClick={(event) => {
               const loginForm = event.currentTarget.form;
-              if (choice.handoffUrl && loginForm) {
-                const loginData = new FormData(loginForm);
-                handoff(choice.handoffUrl, String(loginData.get("email") || ""), String(loginData.get("password") || ""));
+              if (choice.handoffUrl && choice.grant && loginForm) {
+                handoff(choice.handoffUrl, choice.grant);
                 return;
               }
               setProduct(choice.code);

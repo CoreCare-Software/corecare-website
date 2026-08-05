@@ -1,6 +1,7 @@
 import { getDb } from "../../../db";
 import { contactRequests } from "../../../db/schema";
 import { getProduct } from "../../products";
+import { readJsonObject } from "../_shared/body";
 import { allowFormRequest, dispatchAutomation, recordEvent, validSameOriginRequest } from "../_shared/forms";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,7 +12,9 @@ export async function POST(request: Request) {
   try {
     const rate = await allowFormRequest(request, "contact", 5, 15);
     if (!rate.allowed) return Response.json({ error: "Too many enquiries were sent from this connection. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
-    const input = await request.json() as Record<string, unknown>;
+    const parsed = await readJsonObject(request, 16_384);
+    if (!parsed.ok) return parsed.response;
+    const input = parsed.value;
     if (clean(input.website)) return Response.json({ ok: true }, { status: 202 });
     const email = clean(input.email).toLowerCase();
     const contactName = clean(input.contactName);

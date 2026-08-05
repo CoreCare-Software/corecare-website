@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
+import { readJsonObject } from "../../_shared/body";
 
 const clean = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 
@@ -16,7 +17,9 @@ function safeWorkspaceUrl(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const input = await request.json() as Record<string, unknown>;
+  const parsed = await readJsonObject(request, 16_384);
+  if (!parsed.ok) return parsed.response;
+  const input = parsed.value;
   const automationToken = clean(input.automationToken, 160);
   const requestedStatus = clean(input.status, 30).toLowerCase();
   const allowedStatuses = new Set(["active", "failed", "expired", "converted"]);

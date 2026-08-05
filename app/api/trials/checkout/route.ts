@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
+import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, dispatchAutomation, recordEvent, validSameOriginRequest } from "../../_shared/forms";
 
 function safeStripeCheckoutUrl(value: unknown) {
@@ -15,7 +16,9 @@ export async function POST(request: Request) {
   const rate = await allowFormRequest(request, "trial-checkout", 5, 15);
   if (!rate.allowed) return Response.json({ error: "Please wait before trying checkout again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
   try {
-    const input = await request.json() as { token?: string; planId?: string };
+    const parsed = await readJsonObject<{ token?: string; planId?: string }>(request, 8_192);
+    if (!parsed.ok) return parsed.response;
+    const input = parsed.value;
     const token = String(input.token || "").trim().slice(0, 160);
     const planId = ["limited", "unlimited"].includes(String(input.planId || "").toLowerCase()) ? String(input.planId).toLowerCase() : "limited";
     if (token.length < 40) return Response.json({ error: "Trial not found." }, { status: 404 });
