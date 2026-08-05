@@ -13,6 +13,22 @@ test("ships the CoreCare showcase and product suite", async () => {
   assert.match(styles, /@media\(max-width:760px\)/);
 });
 
+test("includes interactive visual workflows for every CoreCare product", async () => {
+  const [page, client, demos, navigation, sitemap] = await Promise.all([
+    readFile(new URL("../app/demos/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/demos/demo-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/demos/demo-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/site-chrome.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /See every CoreCare product in action/);
+  assert.match(client, /role="tabpanel"/);
+  assert.match(client, /Representative demonstration/);
+  for (const code of ["CARE", "CAMPSITE", "FINANCE", "GARAGE", "POS", "PLATFORM"]) assert.match(demos, new RegExp(`${code}:`));
+  assert.match(navigation, /href="\/demos"/);
+  assert.match(sitemap, /"\/demos"/);
+});
+
 test("includes durable trial, live checkout and product-owned login handoffs", async () => {
   const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
