@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const input = await request.json() as Record<string, unknown>;
   const automationToken = clean(input.automationToken, 160);
   const requestedStatus = clean(input.status, 30).toLowerCase();
-  const allowedStatuses = new Set(["active", "failed", "expired"]);
+  const allowedStatuses = new Set(["active", "failed", "expired", "converted"]);
   if (automationToken.length < 40 || !allowedStatuses.has(requestedStatus)) {
     return Response.json({ error: "A valid trial token and status are required." }, { status: 400 });
   }

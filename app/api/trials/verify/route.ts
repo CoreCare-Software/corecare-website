@@ -21,6 +21,6 @@ export async function POST(request: Request) {
     createdAt: trialRequests.createdAt,
   }).from(trialRequests).where(eq(trialRequests.automationToken, automationToken)).limit(1);
   const trial = rows[0];
-  if (!trial || !["requested", "active"].includes(trial.status)) return Response.json({ error: "Trial authorisation not found." }, { status: 404 });
+  if (!trial || !["requested", "active", "expired", "converted"].includes(trial.status)) return Response.json({ error: "Trial authorisation not found." }, { status: 404 });
   return Response.json({ ok: true, trial }, { headers: { "cache-control": "no-store" } });
 }

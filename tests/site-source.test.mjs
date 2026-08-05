@@ -13,13 +13,15 @@ test("ships the CoreCare showcase and product suite", async () => {
   assert.match(styles, /@media\(max-width:760px\)/);
 });
 
-test("includes durable trial and product-owned login handoffs", async () => {
-  const [schema, trialRoute, activationRoute, passwordRoute, statusClient, loginRoute, worker, hosting] = await Promise.all([
+test("includes durable trial, live checkout and product-owned login handoffs", async () => {
+  const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/activate/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/password/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trials/checkout/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/trial/status/status-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/plans/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
@@ -31,7 +33,11 @@ test("includes durable trial and product-owned login handoffs", async () => {
   assert.match(schema, /automation_token/);
   assert.match(passwordRoute, /trial-password/);
   assert.match(passwordRoute, /credentialsSetAt/);
+  assert.match(checkoutRoute, /result\.mode === "live"/);
+  assert.match(checkoutRoute, /trial_\$\{mode\}_checkout_started/);
   assert.match(statusClient, /Activate my 30-day trial/);
+  assert.match(statusClient, /Secure live checkout/);
+  assert.doesNotMatch(plansPage, /currently being verified in Stripe test mode/);
   assert.match(loginRoute, /\/auth\/portal-login/);
   assert.doesNotMatch(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
   assert.match(worker, /Content-Security-Policy/);

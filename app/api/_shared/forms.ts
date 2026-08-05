@@ -43,7 +43,7 @@ export async function recordEvent(eventName: string, details: { productCode?: st
   }
 }
 
-export async function dispatchAutomation(kind: "trial" | "contact", payload: Record<string, unknown>) {
+export async function dispatchAutomation(kind: "trial" | "trial-checkout" | "trial-billing-status" | "contact", payload: Record<string, unknown>) {
   const runtime = env as unknown as Record<string, string | undefined>;
   const url = runtime.CORECARE_AUTOMATION_URL || "https://corecare-platform.cselectricalservices11.workers.dev/api/public/automation";
   const response = await fetch(url, {
