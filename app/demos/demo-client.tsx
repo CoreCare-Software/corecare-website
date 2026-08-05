@@ -1,22 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { PRODUCTS, type CoreCareProduct } from "../products";
 import { Arrow } from "../site-chrome";
 import { PRODUCT_DEMOS } from "./demo-data";
 
-function productFromQuery() {
-  if (typeof window === "undefined") return PRODUCTS[0];
-  const requested = new URLSearchParams(window.location.search).get("product")?.toUpperCase();
-  return PRODUCTS.find((product) => product.code === requested || product.slug.toUpperCase() === requested) || PRODUCTS[0];
-}
-
-export default function DemoClient() {
-  const [product, setProduct] = useState<CoreCareProduct>(PRODUCTS[0]);
+export default function DemoClient({ initialProductCode = "" }: { initialProductCode?: string }) {
+  const initialProduct = PRODUCTS.find((product) => product.code === initialProductCode.toUpperCase() || product.slug.toUpperCase() === initialProductCode.toUpperCase()) || PRODUCTS[0];
+  const [product, setProduct] = useState<CoreCareProduct>(initialProduct);
   const [viewIndex, setViewIndex] = useState(0);
-
-  useEffect(() => setProduct(productFromQuery()), []);
 
   const demo = PRODUCT_DEMOS[product.code];
   const view = demo.views[viewIndex];

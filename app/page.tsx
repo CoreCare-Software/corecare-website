@@ -2,7 +2,7 @@ import HomeClient from "./home-client";
 import { COMPANY_DETAILS } from "./company-details";
 
 export default function Home() {
-  const structuredData = {
+  const structuredData = [{
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "CoreCare Systems",
@@ -17,7 +17,15 @@ export default function Home() {
       addressCountry: "GB",
     },
     areaServed: "GB",
+    founder: { "@type": "Person", name: COMPANY_DETAILS.proprietorName },
     sameAs: [],
-  };
+  }, {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "CoreCare Systems",
+    alternateName: "CoreCare Systems UK",
+    url: "https://www.corecaresystems.co.uk",
+    publisher: { "@type": "Organization", name: "CoreCare Systems" },
+  }];
   return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><HomeClient /></>;
 }

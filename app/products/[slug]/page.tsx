@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PRODUCT_DETAILS } from "../../product-details";
+import { PRODUCT_REQUIREMENTS } from "../../product-requirements";
 import { CUSTOMER_PRODUCTS, getProductBySlug } from "../../products";
 import { Arrow, MarketingShell } from "../../site-chrome";
 
@@ -25,6 +26,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = getProductBySlug((await params).slug);
   if (!product) notFound();
   const detail = PRODUCT_DETAILS[product.code];
+  const requirements = PRODUCT_REQUIREMENTS[product.code];
   const baseUrl = "https://www.corecaresystems.co.uk";
   const structuredData = [
     {
@@ -58,6 +60,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
     <section className="section process-section"><div className="site-shell"><div className="section-heading split-heading"><div><p className="eyebrow">A working day</p><h2>From first action to clear follow-up.</h2></div><p>The exact configuration follows your roles and process. This is the representative flow used in a guided demonstration.</p></div><div className="process-grid">{detail.workflows.map((workflow, index) => <article key={workflow.title}><span>0{index + 1}</span><h3>{workflow.title}</h3><p>{workflow.description}</p></article>)}</div></div></section>
 
     <section className="section product-evidence-section"><div className="site-shell evidence-grid"><article><p className="eyebrow">Reporting views</p><h2>See what needs attention.</h2><ul className="content-list">{detail.reports.map((report) => <li key={report}>{report}</li>)}</ul></article><article><p className="eyebrow">Confirm before live use</p><h2>No hidden assumptions.</h2><p>These items are checked and agreed during onboarding:</p><ul className="content-list warning-list">{detail.confirmBeforeLive.map((item) => <li key={item}>{item}</li>)}</ul></article></div></section>
+
+    <section className="section"><div className="site-shell"><div className="section-heading split-heading"><div><p className="eyebrow">Fit and requirements</p><h2>Decide with the practical details visible.</h2></div><p>A guided evaluation is not unrestricted production approval. These requirements make the current fit and limitations explicit before you invest time.</p></div><div className="fit-grid"><article><h3>Best suited to</h3><ul className="content-list">{requirements.bestSuitedTo.map((item) => <li key={item}>{item}</li>)}</ul></article><article><h3>Not suited to</h3><ul className="content-list warning-list">{requirements.notSuitedTo.map((item) => <li key={item}>{item}</li>)}</ul></article></div><div className="requirement-grid"><article><span>Organisation</span><p>{requirements.typicalOrganisation}</p></article><article><span>Devices</span><p>{requirements.devices}</p></article><article><span>Connection</span><p>{requirements.connectivity}</p></article><article><span>Migration</span><p>{requirements.migration}</p></article><article><span>Implementation</span><p>{requirements.implementation}</p></article><article><span>Support</span><p>{requirements.support}</p></article></div></div></section>
+
+    <section className="section product-evidence-section"><div className="site-shell legal-copy wide-legal-copy"><p className="eyebrow">Current capability matrix</p><h2>Available, conditional or not offered</h2><p>The labels below use the same meaning across all five CoreCare products. “Available to evaluate” means a representative workflow can be explored; it does not by itself approve production use.</p><div className="legal-table-wrap"><table><thead><tr><th>Capability</th><th>Status</th><th>What that means</th></tr></thead><tbody>{requirements.featureStatus.map((feature) => <tr key={feature.capability}><td><strong>{feature.capability}</strong></td><td><span className={`status-label status-${feature.status.toLowerCase().replaceAll(" ", "-")}`}>{feature.status}</span></td><td>{feature.note}</td></tr>)}</tbody></table></div><h3>Current limitations</h3><ul className="content-list warning-list">{requirements.currentLimitations.map((item) => <li key={item}>{item}</li>)}</ul><p><Link href="/product-status">Read the product-status definitions <Arrow /></Link></p></div></section>
 
     <section className="section"><div className="site-shell"><div className="section-heading centered-heading"><p className="eyebrow">Implementation</p><h2>A guided route from trial to readiness.</h2><p>A trial is an evaluation workspace. Moving real operations into CoreCare happens only after an agreed readiness review.</p></div><ol className="onboarding-grid">{detail.onboarding.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></div></section>
 

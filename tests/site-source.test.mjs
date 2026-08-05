@@ -14,6 +14,34 @@ test("ships the CoreCare showcase and product suite", async () => {
   assert.match(styles, /@media\(max-width:760px\)/);
 });
 
+test("publishes precise commercial, maturity and trust information", async () => {
+  const [plans, products, requirements, productPage, legal, about, status, solutions, sitemap, subprocessors] = await Promise.all([
+    readFile(new URL("../app/plans/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/products.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/product-requirements.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/products/[slug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/legal/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/about/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/status/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/solutions-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/subprocessors/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(plans, /Up to 5 active product users/);
+  assert.match(plans, /50 GB hosted storage/);
+  assert.match(plans, /No VAT is currently added/);
+  assert.match(plans, /What “Unlimited” does and does not mean/);
+  assert.match(products, /availability: "Guided evaluation"/);
+  assert.match(requirements, /Not currently offered/);
+  assert.match(productPage, /Current capability matrix/);
+  assert.match(legal, /CONTRACTING_NAME/);
+  assert.match(about, /Christopher|CONTRACTING_NAME/);
+  assert.match(status, /api\/health/);
+  assert.match(solutions, /domiciliary-care-management-software/);
+  assert.match(sitemap, /SOLUTIONS/);
+  assert.match(subprocessors, /Stripe Payments Europe/);
+});
+
 test("includes interactive visual workflows for every CoreCare product", async () => {
   const [page, client, demos, navigation, sitemap] = await Promise.all([
     readFile(new URL("../app/demos/page.tsx", import.meta.url), "utf8"),

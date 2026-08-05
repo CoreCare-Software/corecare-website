@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const teamSize = clean(input.teamSize, 40);
     const product = getProduct(clean(input.productCode, 20));
     if (!EMAIL_PATTERN.test(email) || contactName.length < 2 || companyName.length < 2 || !product?.trialAvailable || clean(input.privacyAccepted) !== "yes") {
-      return Response.json({ error: "Complete your name, organisation, work email, product and privacy confirmation." }, { status: 400 });
+      return Response.json({ error: "Complete your name, organisation, email address, product and privacy confirmation." }, { status: 400 });
     }
 
     const db = getDb();
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const id = crypto.randomUUID();
     const accessToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
     const automationToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
-    await db.insert(trialRequests).values({ id, accessToken, automationToken, email, contactName, companyName, phone, productCode: product.code, teamSize, status: "requested", trialStartedAt: "", trialEndsAt: "", provisioningStatus: "queued", consentVersion: "2026-08-04", source: "website" });
+    await db.insert(trialRequests).values({ id, accessToken, automationToken, email, contactName, companyName, phone, productCode: product.code, teamSize, status: "requested", trialStartedAt: "", trialEndsAt: "", provisioningStatus: "queued", consentVersion: "2026-08-05", source: "website" });
     let provisioningStatus = "queued";
     try {
       const dispatched = await dispatchAutomation("trial", { automationToken });
