@@ -68,3 +68,32 @@ export const analyticsEvents = sqliteTable("analytics_events", {
   outcome: text("outcome").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_analytics_events_name_created").on(table.eventName, table.createdAt)]);
+
+export const privacyRequests = sqliteTable("privacy_requests", {
+  id: text("id").primaryKey(),
+  reference: text("reference").notNull(),
+  automationToken: text("automation_token").notNull(),
+  requestType: text("request_type").notNull(),
+  requesterName: text("requester_name").notNull(),
+  requesterEmail: text("requester_email").notNull(),
+  organisationName: text("organisation_name").notNull().default(""),
+  relationship: text("relationship").notNull(),
+  productCode: text("product_code"),
+  requestSummary: text("request_summary").notNull(),
+  status: text("status").notNull().default("received"),
+  identityStatus: text("identity_status").notNull().default("not_checked"),
+  receivedAt: text("received_at").notNull(),
+  dueAt: text("due_at").notNull(),
+  extendedDueAt: text("extended_due_at"),
+  completedAt: text("completed_at"),
+  assignedTo: text("assigned_to"),
+  outcomeSummary: text("outcome_summary"),
+  consentVersion: text("consent_version").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("idx_privacy_requests_reference").on(table.reference),
+  uniqueIndex("idx_privacy_requests_automation_token").on(table.automationToken),
+  index("idx_privacy_requests_status_due").on(table.status, table.dueAt),
+  index("idx_privacy_requests_email").on(table.requesterEmail),
+]);
