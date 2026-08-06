@@ -4,6 +4,7 @@ import { getProduct } from "../../../products";
 import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../../_shared/forms";
 import { turnstileRejected, verifyTurnstile } from "../../_shared/turnstile";
+import { createStatusCapability } from "../../../../db/capability-tokens";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REQUEST_TYPES = new Set(["access", "correction", "erasure", "restriction", "objection", "portability", "other"]);
@@ -44,14 +45,14 @@ export async function POST(request: Request) {
     }
 
     const id = crypto.randomUUID();
-    const automationToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
+    const privateReference = await createStatusCapability(24);
     const received = new Date();
     const reference = `DSR-${received.toISOString().slice(2, 10).replaceAll("-", "")}-${id.slice(0, 6).toUpperCase()}`;
     const dueAt = oneCalendarMonthFrom(received);
     await getDb().insert(privacyRequests).values({
       id,
       reference,
-      automationToken,
+      automationToken: privateReference.tokenHash,
       requestType,
       requesterName,
       requesterEmail,

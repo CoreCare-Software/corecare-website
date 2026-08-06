@@ -4,6 +4,7 @@ import { getProduct } from "../../products";
 import { readJsonObject } from "../_shared/body";
 import { allowFormRequest, dispatchAutomation, recordEvent, validSameOriginRequest } from "../_shared/forms";
 import { turnstileRejected, verifyTurnstile } from "../_shared/turnstile";
+import { createStatusCapability } from "../../../db/capability-tokens";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max = 240) => String(value ?? "").trim().slice(0, max);
@@ -27,11 +28,11 @@ export async function POST(request: Request) {
       return Response.json({ error: "Complete your name, organisation, email address, message and privacy confirmation." }, { status: 400 });
     }
     const id = crypto.randomUUID();
-    const automationToken = `${crypto.randomUUID()}${crypto.randomUUID().replaceAll("-", "")}`;
+    const automation = await createStatusCapability(24 * 7);
     const reference = `CC-${new Date().toISOString().slice(2, 10).replaceAll("-", "")}-${id.slice(0, 6).toUpperCase()}`;
-    await getDb().insert(contactRequests).values({ id, reference, automationToken, email, contactName, companyName, productCode: product?.code || null, message, status: "new", consentVersion: "2026-08-05" });
+    await getDb().insert(contactRequests).values({ id, reference, automationToken: null, automationTokenHash: automation.tokenHash, automationTokenExpiresAt: automation.expiresAt, email, contactName, companyName, productCode: product?.code || null, message, status: "new", consentVersion: "2026-08-05" });
     let outcome = "saved";
-    try { const dispatched = await dispatchAutomation("contact", { automationToken }); outcome = dispatched.dispatched ? "dispatched" : "saved"; } catch { outcome = "dispatch_pending"; }
+    try { const dispatched = await dispatchAutomation("contact", { automationToken: automation.token }); outcome = dispatched.dispatched ? "dispatched" : "saved"; } catch { outcome = "dispatch_pending"; }
     await recordEvent("contact_request", { productCode: product?.code, path: "/contact", outcome });
     return Response.json({ ok: true, reference }, { status: 201 });
   } catch {

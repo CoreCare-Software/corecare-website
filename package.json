@@ -9,10 +9,16 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "deploy:cloudflare": "wrangler deploy --config wrangler.cloudflare.jsonc",
+    "deploy:staging": "wrangler deploy --config wrangler.cloudflare.jsonc --env staging",
+    "check": "wrangler deploy --dry-run --config wrangler.cloudflare.jsonc --env=\"\"",
+    "check:staging": "wrangler deploy --dry-run --config wrangler.cloudflare.jsonc --env staging",
     "start": "vinext start",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.cloudflare.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc",
+    "db:migrate:staging": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc --env staging"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

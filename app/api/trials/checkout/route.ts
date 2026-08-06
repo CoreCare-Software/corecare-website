@@ -3,6 +3,7 @@ import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
 import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, dispatchAutomation, recordEvent, validSameOriginRequest } from "../../_shared/forms";
+import { automationTokenForTrial, findTrialByStatusToken } from "../../../../db/trial-capabilities";
 
 function safeStripeCheckoutUrl(value: unknown) {
   try {
@@ -22,13 +23,14 @@ export async function POST(request: Request) {
     const token = String(input.token || "").trim().slice(0, 160);
     const planId = ["limited", "unlimited"].includes(String(input.planId || "").toLowerCase()) ? String(input.planId).toLowerCase() : "limited";
     if (token.length < 40) return Response.json({ error: "Trial not found." }, { status: 404 });
-    const rows = await getDb().select().from(trialRequests).where(eq(trialRequests.accessToken, token)).limit(1);
-    const trial = rows[0];
-    if (!trial || !trial.automationToken) return Response.json({ error: "Trial not found." }, { status: 404 });
+    const trial = await findTrialByStatusToken(token);
+    if (!trial) return Response.json({ error: "Trial not found." }, { status: 404 });
+    const automationToken = await automationTokenForTrial(trial);
+    if (!automationToken) return Response.json({ error: "Trial not found." }, { status: 404 });
     const trialEnd = new Date(trial.trialEndsAt || 0);
     if (!trial.credentialsSetAt || !Number.isFinite(trialEnd.getTime())) return Response.json({ error: "Activate the trial workspace before choosing a subscription." }, { status: 409 });
     if (trialEnd.getTime() > Date.now()) return Response.json({ error: "Your free trial is still active. Checkout becomes available when it ends." }, { status: 409 });
-    const dispatched = await dispatchAutomation("trial-checkout", { automationToken: trial.automationToken, statusToken: token, planId });
+    const dispatched = await dispatchAutomation("trial-checkout", { automationToken, statusToken: token, planId });
     const result = dispatched.result as { url?: unknown; sessionId?: unknown; mode?: unknown; plan?: unknown; error?: unknown };
     const url = safeStripeCheckoutUrl(result.url);
     const sessionId = String(result.sessionId || "").trim().slice(0, 255);

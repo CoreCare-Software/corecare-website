@@ -87,6 +87,8 @@ test("includes durable trial, live checkout and one-time product login grants", 
   assert.doesNotMatch(plansPage, /currently being verified in Stripe test mode/);
   assert.match(loginRoute, /\/auth\/portal-claim/);
   assert.match(loginRoute, /portal-broker\.internal/);
+  assert.match(loginRoute, /includePlatform: !selected && ownerEmailAllowed\(email\)/);
+  assert.doesNotMatch(loginRoute, /directUrl: "https:\/\/owner\.corecaresystems\.co\.uk/);
   assert.match(loginClient, /Object\.entries\(\{ grant, returnTo/);
   assert.doesNotMatch(loginClient, /Object\.entries\(\{ email, password/);
   assert.doesNotMatch(loginRoute, /workers\.dev/);

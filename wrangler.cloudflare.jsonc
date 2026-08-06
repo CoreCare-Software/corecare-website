@@ -40,8 +40,10 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "corecare-platform",
-      "database_id": "b9f64a82-6e14-4b4c-837e-f050022aba29"
+      "database_name": "corecare-website",
+      "database_id": "658f7b26-ac27-45de-8228-373dc6318081",
+      "migrations_dir": "drizzle",
+      "migrations_pattern": "drizzle/*.sql"
     }
   ],
   "rules": [
@@ -52,5 +54,40 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "env": {
+    "staging": {
+      "name": "corecare-website-staging",
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+      "images": {
+        "binding": "IMAGES"
+      },
+      "services": [
+        {
+          "binding": "CORECARE_PLATFORM",
+          "service": "corecare-platform-staging",
+          "entrypoint": "PortalBroker"
+        },
+        {
+          "binding": "CORECARE_PLATFORM_AUTOMATION",
+          "service": "corecare-platform-staging"
+        }
+      ],
+      "vars": {
+        "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com",
+        "TURNSTILE_HOSTNAMES": "localhost,127.0.0.1"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "corecare-website-staging",
+          "database_id": "f1e68871-6444-411e-815a-9f12eb57b6b9",
+          "migrations_dir": "drizzle",
+          "migrations_pattern": "drizzle/*.sql"
+        }
+      ]
+    }
   }
 }

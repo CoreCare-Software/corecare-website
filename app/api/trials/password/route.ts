@@ -3,6 +3,7 @@ import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
 import { readJsonObject } from "../../_shared/body";
 import { allowFormRequest, recordEvent, requestAutomation, validSameOriginRequest } from "../../_shared/forms";
+import { automationTokenForTrial, findTrialByStatusToken } from "../../../../db/trial-capabilities";
 
 const clean = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 
@@ -28,15 +29,15 @@ export async function POST(request: Request) {
   }
 
   const db = getDb();
-  const rows = await db.select().from(trialRequests).where(eq(trialRequests.accessToken, token)).limit(1);
-  const trial = rows[0];
+  const trial = await findTrialByStatusToken(token);
   if (!trial) return Response.json({ error: "Trial not found." }, { status: 404 });
   if (trial.credentialsSetAt && trial.status === "active") return Response.json({ ok: true, alreadyActive: true, workspaceUrl: trial.workspaceUrl });
-  if (!trial.automationToken || trial.status !== "requested") return Response.json({ error: "This trial cannot be activated from this link." }, { status: 409 });
+  const automationToken = await automationTokenForTrial(trial);
+  if (!automationToken || trial.status !== "requested") return Response.json({ error: "This trial cannot be activated from this link." }, { status: 409 });
 
   let response: Response;
   try {
-    response = await requestAutomation("trial-password", { automationToken: trial.automationToken, password });
+    response = await requestAutomation("trial-password", { automationToken, password });
   } catch {
     return Response.json({ error: "Your workspace is still being prepared. Please try again shortly." }, { status: 503 });
   }

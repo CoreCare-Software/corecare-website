@@ -13,7 +13,6 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
   const [product, setProduct] = useState(validInitial);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialError);
-  const [directUrl, setDirectUrl] = useState("");
   const [choices, setChoices] = useState<ProductChoice[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
@@ -44,7 +43,6 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
     }
     setBusy(true);
     setMessage("");
-    setDirectUrl("");
     setChoices([]);
     const form = new FormData(event.currentTarget);
     try {
@@ -53,17 +51,12 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...Object.fromEntries(form.entries()), turnstileToken }),
       });
-      const result = await response.json() as { ok?: boolean; handoffUrl?: string; grant?: string; error?: string; directUrl?: string; products?: ProductChoice[] };
-      if (result.ok && result.directUrl) {
-        window.location.assign(result.directUrl);
-        return;
-      }
+      const result = await response.json() as { ok?: boolean; handoffUrl?: string; grant?: string; error?: string; products?: ProductChoice[] };
       if (result.ok && result.handoffUrl && result.grant) {
         handoff(result.handoffUrl, result.grant);
         return;
       }
       setMessage(result.error || "We could not sign you in.");
-      setDirectUrl(result.directUrl || "");
       setChoices(result.products || []);
     } catch {
       setMessage("We could not reach the CoreCare login service. Please try again.");
@@ -85,7 +78,7 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
             <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{CUSTOMER_PRODUCTS.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
             <label className="form-label">Password<span className="password-field"><input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" aria-describedby={capsLock ? "caps-lock-note" : undefined} onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))} onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))} onBlur={() => setCapsLock(false)} required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Hide" : "Show"}</button></span>{capsLock ? <small id="caps-lock-note" className="field-note" role="status">Caps Lock is on.</small> : null}</label>
             <TurnstileWidget ref={turnstile} action="login" onToken={setTurnstileToken} />
-            {message ? <div className="form-message" role="alert" aria-live="assertive"><p>{message}</p>{directUrl ? <a href={directUrl}>Open this product’s current login.</a> : null}</div> : null}
+            {message ? <div className="form-message" role="alert" aria-live="assertive"><p>{message}</p></div> : null}
             {choices.length ? <fieldset className="login-choices"><legend>Choose a valid workspace</legend>{choices.map((choice) => <button type="button" key={choice.code} onClick={(event) => {
               const loginForm = event.currentTarget.form;
               if (choice.handoffUrl && choice.grant && loginForm) {

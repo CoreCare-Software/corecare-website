@@ -3,8 +3,14 @@ import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqli
 
 export const trialRequests = sqliteTable("trial_requests", {
   id: text("id").primaryKey(),
-  accessToken: text("access_token").notNull(),
+  accessToken: text("access_token"),
+  accessTokenHash: text("access_token_hash").notNull(),
+  accessTokenExpiresAt: text("access_token_expires_at").notNull(),
   automationToken: text("automation_token"),
+  automationTokenHash: text("automation_token_hash").notNull(),
+  automationTokenCiphertext: text("automation_token_ciphertext").notNull(),
+  automationTokenIv: text("automation_token_iv").notNull(),
+  automationTokenExpiresAt: text("automation_token_expires_at").notNull(),
   email: text("email").notNull(),
   contactName: text("contact_name").notNull(),
   companyName: text("company_name").notNull(),
@@ -27,8 +33,8 @@ export const trialRequests = sqliteTable("trial_requests", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
-  uniqueIndex("idx_trial_requests_access_token").on(table.accessToken),
-  uniqueIndex("idx_trial_requests_automation_token").on(table.automationToken),
+  uniqueIndex("idx_trial_requests_access_token_hash").on(table.accessTokenHash),
+  uniqueIndex("idx_trial_requests_automation_token_hash").on(table.automationTokenHash),
   index("idx_trial_requests_email_product").on(table.email, table.productCode),
   index("idx_trial_requests_status_ends").on(table.status, table.trialEndsAt),
 ]);
@@ -37,6 +43,8 @@ export const contactRequests = sqliteTable("contact_requests", {
   id: text("id").primaryKey(),
   reference: text("reference").notNull(),
   automationToken: text("automation_token"),
+  automationTokenHash: text("automation_token_hash").notNull(),
+  automationTokenExpiresAt: text("automation_token_expires_at").notNull(),
   email: text("email").notNull(),
   contactName: text("contact_name").notNull(),
   companyName: text("company_name").notNull(),
@@ -48,7 +56,7 @@ export const contactRequests = sqliteTable("contact_requests", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("idx_contact_requests_reference").on(table.reference),
-  uniqueIndex("idx_contact_requests_automation_token").on(table.automationToken),
+  uniqueIndex("idx_contact_requests_automation_token_hash").on(table.automationTokenHash),
   index("idx_contact_requests_status_created").on(table.status, table.createdAt),
   index("idx_contact_requests_email").on(table.email),
 ]);
