@@ -16,7 +16,11 @@ const localBindingConfig = {
   compatibility_flags: ["nodejs_compat"],
   assets: {
     binding: "ASSETS",
-    run_worker_first: ["/assets/*", "/_next/static/*"],
+    run_worker_first: [
+      "/_corecare-static/*",
+      "/assets/*",
+      "/_next/static/*",
+    ],
   },
   d1_databases: d1
     ? [
@@ -48,6 +52,9 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    // Keep public asset URLs off the hosting provider's direct-static path so
+    // the Worker can apply immutable caching consistently on every domain.
+    base: "/_corecare-static/",
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,

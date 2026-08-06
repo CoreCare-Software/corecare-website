@@ -50,7 +50,11 @@ test("uses nonce-authorised scripts and routes hashed assets through the Worker"
   assert.match(worker, /script-src-attr 'none'/);
   assert.match(worker, /new HTMLRewriter\(\)/);
   assert.match(worker, /element\.setAttribute\("nonce", nonce\)/);
+  assert.match(vite, /base:\s*"\/_corecare-static\/"/);
+  assert.match(worker, /PUBLIC_ASSET_PREFIX/);
+  assert.match(worker, /assetUrl\.pathname\s*=\s*url\.pathname\.slice/);
   assert.match(wrangler, /"run_worker_first"/);
+  assert.match(wrangler, /\/_corecare-static\/\*/);
   assert.match(vite, /run_worker_first/);
 });
 

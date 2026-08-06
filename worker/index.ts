@@ -2,6 +2,8 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
+const PUBLIC_ASSET_PREFIX = "/_corecare-static";
+
 const FORM_QUERY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   "/login": ["email", "password", "productCode"],
   "/trial": ["contactName", "email", "companyName", "phone", "teamSize", "productCode", "privacyAccepted", "website"],
@@ -33,7 +35,11 @@ const worker = {
     }
     let response: Response;
 
-    if (/^\/(?:assets|_next\/static)\//.test(url.pathname)) {
+    if (url.pathname.startsWith(`${PUBLIC_ASSET_PREFIX}/assets/`)) {
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = url.pathname.slice(PUBLIC_ASSET_PREFIX.length);
+      response = await env.ASSETS.fetch(new Request(assetUrl, request));
+    } else if (/^\/(?:assets|_next\/static)\//.test(url.pathname)) {
       response = await env.ASSETS.fetch(request);
     } else if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
@@ -83,7 +89,10 @@ function withProductionHeaders(request: Request, response: Response) {
 
   if (url.pathname.startsWith("/api/") || ["/login", "/trial/status"].includes(url.pathname)) {
     headers.set("Cache-Control", "no-store");
-  } else if (/^\/(?:_next\/static|assets)\//.test(url.pathname)) {
+  } else if (
+    url.pathname.startsWith(`${PUBLIC_ASSET_PREFIX}/assets/`) ||
+    /^\/(?:_next\/static|assets)\//.test(url.pathname)
+  ) {
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
   } else if ((headers.get("content-type") || "").includes("text/html")) {
     headers.set("Cache-Control", "public, max-age=0, s-maxage=300, stale-while-revalidate=3600");
