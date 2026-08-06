@@ -1,4 +1,5 @@
 const JSON_CONTENT_TYPE = /^(?:application\/json|[^;]+\+json)(?:;|$)/i;
+const FORM_CONTENT_TYPE = /^application\/x-www-form-urlencoded(?:;|$)/i;
 
 export type JsonObject = Record<string, unknown>;
 
@@ -15,7 +16,9 @@ function failure(message: string, status: number): JsonBodyResult<never> {
 
 export async function readJsonObject<T extends JsonObject = JsonObject>(request: Request, maxBytes = 65_536): Promise<JsonBodyResult<T>> {
   const contentType = request.headers.get("content-type") || "";
-  if (!JSON_CONTENT_TYPE.test(contentType)) return failure("Submit this request as JSON.", 415);
+  const isJson = JSON_CONTENT_TYPE.test(contentType);
+  const isForm = FORM_CONTENT_TYPE.test(contentType);
+  if (!isJson && !isForm) return failure("Submit this request as JSON or a standard form.", 415);
 
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return failure("This request is too large.", 413);
@@ -39,6 +42,12 @@ export async function readJsonObject<T extends JsonObject = JsonObject>(request:
     raw += decoder.decode();
   } catch {
     return failure("The request body could not be read.", 400);
+  }
+
+  if (isForm) {
+    const form = Object.fromEntries(new URLSearchParams(raw));
+    if (!form.turnstileToken && form["cf-turnstile-response"]) form.turnstileToken = form["cf-turnstile-response"];
+    return { ok: true, value: form as T };
   }
 
   try {

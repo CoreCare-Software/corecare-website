@@ -80,7 +80,7 @@ export default function LoginClient({ initialProduct = "", initialError = "" }: 
         <p className="eyebrow">Your CoreCare account</p>
         <h1>Good to see you again.</h1>
         <p>Use one login page. Your credentials are checked securely by the CoreCare products and you are sent to the valid workspace.</p>
-          <form onSubmit={submit}>
+          <form method="post" action="/api/login" onSubmit={submit}>
             <label className="form-label">Email address<input type="email" name="email" autoComplete="username" required /></label>
             <label className="form-label">Product<select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}><option value="">Find it from my account</option>{CUSTOMER_PRODUCTS.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
             <label className="form-label">Password<span className="password-field"><input type={showPassword ? "text" : "password"} name="password" autoComplete="current-password" aria-describedby={capsLock ? "caps-lock-note" : undefined} onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))} onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))} onBlur={() => setCapsLock(false)} required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? "Hide" : "Show"}</button></span>{capsLock ? <small id="caps-lock-note" className="field-note" role="status">Caps Lock is on.</small> : null}</label>

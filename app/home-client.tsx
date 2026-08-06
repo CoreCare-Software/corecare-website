@@ -5,22 +5,120 @@ import { useState, type KeyboardEvent } from "react";
 import { CUSTOMER_PRODUCTS, type CoreCareProduct } from "./products";
 import { Arrow, MarketingShell } from "./site-chrome";
 
-function ProductMock({ product, compact = false }: { product: CoreCareProduct; compact?: boolean }) {
+function ProductMock({
+  product,
+  compact = false,
+}: {
+  product: CoreCareProduct;
+  compact?: boolean;
+}) {
   const rows: Record<string, string[][]> = {
-    CARE: [["Morning care · Elsie Bennett", "09:30 · Emma R.", "In progress"], ["Medication round · Oak Wing", "10:00 · 8 people", "Due soon"], ["Care plan review · J. Thompson", "11:15 · Manager review", "Ready"]],
-    CAMPSITE: [["Meadow 12 · The Harris family", "Arriving today · 4 nights", "Confirmed"], ["Willow Pod · M. Carter", "Checking out · 10:00", "On site"], ["Lakeview 4 · Direct booking", "Friday · £164 balance", "New"]],
-    FINANCE: [["Sales invoices", "18 awaiting payment", "£12,840"], ["Bank reconciliation", "Current account · today", "6 to match"], ["VAT position", "Quarter ending September", "On track"]],
-    GARAGE: [["AB12 CDE · Full service", "Bay 2 · Liam", "In progress"], ["EF34 GHI · MOT", "Bay 1 · 10:30", "Inspection"], ["JK56 LMN · Brakes", "Parts received", "Ready"]],
-    POS: [["Table 12 · 4 covers", "Kitchen · 8 mins", "Cooking"], ["Collection #1042", "2 items · paid", "Ready"], ["Table 7 · 2 covers", "Drinks served", "Open"]],
+    CARE: [
+      ["Morning care · Elsie Bennett", "09:30 · Emma R.", "In progress"],
+      ["Medication round · Oak Wing", "10:00 · 8 people", "Due soon"],
+      ["Care plan review · J. Thompson", "11:15 · Manager review", "Ready"],
+    ],
+    CAMPSITE: [
+      [
+        "Meadow 12 · The Harris family",
+        "Arriving today · 4 nights",
+        "Confirmed",
+      ],
+      ["Willow Pod · M. Carter", "Checking out · 10:00", "On site"],
+      ["Lakeview 4 · Direct booking", "Friday · £164 balance", "New"],
+    ],
+    FINANCE: [
+      ["Sales invoices", "18 awaiting payment", "£12,840"],
+      ["Bank reconciliation", "Current account · today", "6 to match"],
+      ["VAT position", "Quarter ending September", "On track"],
+    ],
+    GARAGE: [
+      ["AB12 CDE · Full service", "Bay 2 · Liam", "In progress"],
+      ["EF34 GHI · MOT", "Bay 1 · 10:30", "Inspection"],
+      ["JK56 LMN · Brakes", "Parts received", "Ready"],
+    ],
+    POS: [
+      ["Table 12 · 4 covers", "Kitchen · 8 mins", "Cooking"],
+      ["Collection #1042", "2 items · paid", "Ready"],
+      ["Table 7 · 2 covers", "Drinks served", "Open"],
+    ],
   };
-  return <div className={`product-mock${compact ? " compact-mock" : ""}`} style={{ "--product-accent": product.accent, "--product-soft": product.soft } as React.CSSProperties} role="img" aria-label={`Illustrative ${product.name} workspace using representative data`}>
-    <div className="mock-sidebar" aria-hidden="true"><span className="mock-logo">C</span><span className="mock-nav active" /><span className="mock-nav" /><span className="mock-nav" /><span className="mock-nav short" /><span className="mock-avatar" /></div>
-    <div className="mock-workspace" aria-hidden="true"><div className="mock-topbar"><span><small>{product.name}</small><strong>Good morning, Alex</strong></span><i>⌕</i><b>AR</b></div><div className="mock-content">
-      <div className="mock-heading"><span><small>Today at a glance</small><strong>{product.metric.label}</strong></span><button type="button" disabled tabIndex={-1}>+ New</button></div>
-      <div className="mock-metrics"><article><small>{product.metric.label}</small><strong>{product.metric.value}</strong><span>{product.metric.detail}</span></article><article><small>Needs attention</small><strong>{product.code === "FINANCE" ? "6" : "2"}</strong><span>Prioritised for you</span></article><article><small>Team activity</small><strong>{product.code === "CAMPSITE" ? "18" : "24"}</strong><span>Updates today</span></article></div>
-      <div className="mock-panel"><div className="mock-panel-head"><strong>Live workspace</strong><span>View all</span></div>{rows[product.code].map((row, index) => <div className="mock-row" key={row[0]}><i>{index + 1}</i><span><strong>{row[0]}</strong><small>{row[1]}</small></span><em>{row[2]}</em></div>)}</div>
-    </div></div>
-  </div>;
+  return (
+    <div
+      className={`product-mock${compact ? " compact-mock" : ""}`}
+      style={
+        {
+          "--product-accent": product.accent,
+          "--product-soft": product.soft,
+        } as React.CSSProperties
+      }
+      role="img"
+      aria-label={`Illustrative ${product.name} workspace using representative data`}
+    >
+      <div className="mock-sidebar" aria-hidden="true">
+        <span className="mock-logo">C</span>
+        <span className="mock-nav active" />
+        <span className="mock-nav" />
+        <span className="mock-nav" />
+        <span className="mock-nav short" />
+        <span className="mock-avatar" />
+      </div>
+      <div className="mock-workspace" aria-hidden="true">
+        <div className="mock-topbar">
+          <span>
+            <small>{product.name}</small>
+            <strong>Good morning, Alex</strong>
+          </span>
+          <i>⌕</i>
+          <b>AR</b>
+        </div>
+        <div className="mock-content">
+          <div className="mock-heading">
+            <span>
+              <small>Today at a glance</small>
+              <strong>{product.metric.label}</strong>
+            </span>
+            <button type="button" disabled tabIndex={-1}>
+              + New
+            </button>
+          </div>
+          <div className="mock-metrics">
+            <article>
+              <small>{product.metric.label}</small>
+              <strong>{product.metric.value}</strong>
+              <span>{product.metric.detail}</span>
+            </article>
+            <article>
+              <small>Needs attention</small>
+              <strong>{product.code === "FINANCE" ? "6" : "2"}</strong>
+              <span>Prioritised for you</span>
+            </article>
+            <article>
+              <small>Team activity</small>
+              <strong>{product.code === "CAMPSITE" ? "18" : "24"}</strong>
+              <span>Updates today</span>
+            </article>
+          </div>
+          <div className="mock-panel">
+            <div className="mock-panel-head">
+              <strong>Live workspace</strong>
+              <span>View all</span>
+            </div>
+            {rows[product.code].map((row, index) => (
+              <div className="mock-row" key={row[0]}>
+                <i>{index + 1}</i>
+                <span>
+                  <strong>{row[0]}</strong>
+                  <small>{row[1]}</small>
+                </span>
+                <em>{row[2]}</em>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function HomeClient() {
@@ -28,34 +126,468 @@ export default function HomeClient() {
 
   function moveDemoTab(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let next = index;
-    if (event.key === "ArrowRight") next = (index + 1) % CUSTOMER_PRODUCTS.length;
-    else if (event.key === "ArrowLeft") next = (index - 1 + CUSTOMER_PRODUCTS.length) % CUSTOMER_PRODUCTS.length;
+    if (event.key === "ArrowRight")
+      next = (index + 1) % CUSTOMER_PRODUCTS.length;
+    else if (event.key === "ArrowLeft")
+      next = (index - 1 + CUSTOMER_PRODUCTS.length) % CUSTOMER_PRODUCTS.length;
     else if (event.key === "Home") next = 0;
     else if (event.key === "End") next = CUSTOMER_PRODUCTS.length - 1;
     else return;
     event.preventDefault();
     setActiveProduct(CUSTOMER_PRODUCTS[next]);
-    document.getElementById(`demo-tab-${CUSTOMER_PRODUCTS[next].code}`)?.focus();
+    document
+      .getElementById(`demo-tab-${CUSTOMER_PRODUCTS[next].code}`)
+      ?.focus();
   }
 
-  return <MarketingShell>
-    <section className="hero"><div className="hero-orb orb-one" /><div className="hero-orb orb-two" /><div className="site-shell hero-grid">
-      <div className="hero-copy"><p className="eyebrow"><span>Connected business software</span></p><h1>One front door.<br /><em>Every CoreCare product.</em></h1><p className="hero-lead">Run care, campsites, finance, garages and hospitality with focused software that feels like one joined-up system.</p><div className="hero-actions"><Link className="button" href="/trial">Request a 30-day trial <Arrow /></Link><a className="secondary-button" href="#demo">Explore the products <span aria-hidden="true">↓</span></a></div><div className="hero-proof"><span><i>✓</i> No card required</span><span><i>✓</i> Guided onboarding</span><span><i>✓</i> Scope agreed before live use</span></div></div>
-      <div className="hero-visual"><div className="portal-card"><div className="portal-card-head"><span><i className="status-dot" />Your CoreCare</span><small>One place to start</small></div><div className="portal-products">{CUSTOMER_PRODUCTS.map((product) => <button type="button" key={product.code} aria-pressed={activeProduct.code === product.code} className={activeProduct.code === product.code ? "active" : ""} onClick={() => setActiveProduct(product)}><i style={{ background: product.soft, color: product.accent }}>{product.icon}</i><span><strong>{product.shortName}</strong><small>{product.eyebrow}</small></span><b aria-hidden="true">→</b></button>)}</div></div><div className="hero-product-screen"><ProductMock product={activeProduct} compact /></div><div className="floating-note"><i>✓</i><span><strong>Right place, straight away</strong><small>Your registered account opens the product it belongs to.</small></span></div></div>
-    </div></section>
+  return (
+    <MarketingShell>
+      <section className="hero">
+        <div className="hero-orb orb-one" />
+        <div className="hero-orb orb-two" />
+        <div className="site-shell hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">
+              <span>Connected business software</span>
+            </p>
+            <h1>
+              One front door.
+              <br />
+              <em>Every CoreCare product.</em>
+            </h1>
+            <p className="hero-lead">
+              Run care, campsites, finance, garages and hospitality with focused
+              software that feels like one joined-up system.
+            </p>
+            <div className="hero-actions">
+              <Link className="button" href="/trial" prefetch={false}>
+                Request a 30-day trial <Arrow />
+              </Link>
+              <a className="secondary-button" href="#demo">
+                Explore the products <span aria-hidden="true">↓</span>
+              </a>
+            </div>
+            <div className="hero-proof">
+              <span>
+                <i>✓</i> No card required
+              </span>
+              <span>
+                <i>✓</i> Guided onboarding
+              </span>
+              <span>
+                <i>✓</i> Scope agreed before live use
+              </span>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="portal-card">
+              <div className="portal-card-head">
+                <span>
+                  <i className="status-dot" />
+                  Your CoreCare
+                </span>
+                <small>One place to start</small>
+              </div>
+              <div className="portal-products">
+                {CUSTOMER_PRODUCTS.map((product) => (
+                  <button
+                    type="button"
+                    key={product.code}
+                    aria-pressed={activeProduct.code === product.code}
+                    className={
+                      activeProduct.code === product.code ? "active" : ""
+                    }
+                    onClick={() => setActiveProduct(product)}
+                  >
+                    <i
+                      style={{
+                        background: product.soft,
+                        color: product.accent,
+                      }}
+                    >
+                      {product.icon}
+                    </i>
+                    <span>
+                      <strong>{product.shortName}</strong>
+                      <small>{product.eyebrow}</small>
+                    </span>
+                    <b aria-hidden="true">→</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="hero-product-screen">
+              <ProductMock product={activeProduct} compact />
+            </div>
+            <div className="floating-note">
+              <i>✓</i>
+              <span>
+                <strong>Right place, straight away</strong>
+                <small>
+                  Your registered account opens the product it belongs to.
+                </small>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <section className="suite-band" aria-label="CoreCare product suite"><div className="site-shell suite-row"><span>Five focused customer products</span>{CUSTOMER_PRODUCTS.map((product) => <span className="suite-name" key={product.code}>{product.shortName}</span>)}</div></section>
+      <section className="suite-band" aria-label="CoreCare product suite">
+        <div className="site-shell suite-row">
+          <span>Five focused customer products</span>
+          {CUSTOMER_PRODUCTS.map((product) => (
+            <span className="suite-name" key={product.code}>
+              {product.shortName}
+            </span>
+          ))}
+        </div>
+      </section>
 
-    <section className="section products-section" id="products"><div className="site-shell"><div className="section-heading split-heading"><div><p className="eyebrow">Purpose-built products</p><h2>Software shaped around<br />the way you work.</h2></div><p>Choose one product or use several. Each product keeps its own account and workspace while sharing a clear CoreCare experience and support route.</p></div><div className="product-grid">{CUSTOMER_PRODUCTS.map((product, index) => <article className={`product-card product-card-${index + 1}`} key={product.code} style={{ "--product-accent": product.accent, "--product-soft": product.soft } as React.CSSProperties}><div className="product-card-top"><span className="product-icon">{product.icon}</span><span className="product-number">0{index + 1}</span></div><p className="card-eyebrow">{product.eyebrow}</p><h3>{product.name}</h3><p>{product.description}</p><p className="availability-badge">{product.availability}</p><ul>{product.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul><div className="product-card-actions"><Link href={`/products/${product.slug}`}>Explore product <Arrow /></Link><Link href={`/trial?product=${product.code}`}>Request trial</Link></div></article>)}</div></div></section>
+      <section className="section products-section" id="products">
+        <div className="site-shell">
+          <div className="section-heading split-heading">
+            <div>
+              <p className="eyebrow">Purpose-built products</p>
+              <h2>
+                Software shaped around
+                <br />
+                the way you work.
+              </h2>
+            </div>
+            <p>
+              Choose one product or use several. Each product keeps its own
+              account and workspace while sharing a clear CoreCare experience
+              and support route.
+            </p>
+          </div>
+          <div className="product-grid">
+            {CUSTOMER_PRODUCTS.map((product, index) => (
+              <article
+                className={`product-card product-card-${index + 1}`}
+                key={product.code}
+                style={
+                  {
+                    "--product-accent": product.accent,
+                    "--product-soft": product.soft,
+                  } as React.CSSProperties
+                }
+              >
+                <div className="product-card-top">
+                  <span className="product-icon">{product.icon}</span>
+                  <span className="product-number">0{index + 1}</span>
+                </div>
+                <p className="card-eyebrow">{product.eyebrow}</p>
+                <h3>{product.name}</h3>
+                <p>{product.description}</p>
+                <p className="availability-badge">{product.availability}</p>
+                <ul>
+                  {product.features.map((feature) => (
+                    <li key={feature}>
+                      <span>✓</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <div className="product-card-actions">
+                  <Link href={`/products/${product.slug}`}>
+                    Explore product <Arrow />
+                  </Link>
+                  <Link href={`/trial?product=${product.code}`}>
+                    Request trial
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-    <section className="section demo-section" id="demo"><div className="site-shell"><div className="section-heading centered-heading"><p className="eyebrow light-eyebrow">A closer look</p><h2>See the work. Not the software.</h2><p>Pick a CoreCare product for a preview here, then open its full visual demonstration to move through the complete representative workflow.</p></div><div className="demo-tabs" role="tablist" aria-label="Product demonstrations">{CUSTOMER_PRODUCTS.map((product, index) => <button type="button" id={`demo-tab-${product.code}`} key={product.code} role="tab" aria-selected={activeProduct.code === product.code} aria-controls={`demo-panel-${product.code}`} tabIndex={activeProduct.code === product.code ? 0 : -1} className={activeProduct.code === product.code ? "active" : ""} onKeyDown={(event) => moveDemoTab(event, index)} onClick={() => setActiveProduct(product)}><i style={{ background: product.soft, color: product.accent }}>{product.icon}</i>{product.shortName}</button>)}</div><div id={`demo-panel-${activeProduct.code}`} className="demo-stage" role="tabpanel" aria-labelledby={`demo-tab-${activeProduct.code}`} tabIndex={0}><div className="demo-copy"><p className="eyebrow">{activeProduct.eyebrow}</p><h3>{activeProduct.name}</h3><p>{activeProduct.description}</p><ul>{activeProduct.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul><div className="demo-actions"><Link className="button" href={`/demos?product=${activeProduct.code}`}>Open full visual demo <Arrow /></Link><Link className="demo-live-link" href={`/products/${activeProduct.slug}`}>See product details <Arrow /></Link><Link className="demo-live-link" href={`/trial?product=${activeProduct.code}`}>Request a 30-day trial <Arrow /></Link></div></div><ProductMock product={activeProduct} /></div></div></section>
+      <section className="section demo-section" id="demo">
+        <div className="site-shell">
+          <div className="section-heading centered-heading">
+            <p className="eyebrow light-eyebrow">A closer look</p>
+            <h2>See the work. Not the software.</h2>
+            <p>
+              Pick a CoreCare product for a preview here, then open its full
+              visual demonstration to move through the complete representative
+              workflow.
+            </p>
+          </div>
+          <div
+            className="demo-tabs"
+            role="tablist"
+            aria-label="Product demonstrations"
+          >
+            {CUSTOMER_PRODUCTS.map((product, index) => (
+              <button
+                type="button"
+                id={`demo-tab-${product.code}`}
+                key={product.code}
+                role="tab"
+                aria-selected={activeProduct.code === product.code}
+                aria-controls={`demo-panel-${product.code}`}
+                tabIndex={activeProduct.code === product.code ? 0 : -1}
+                className={activeProduct.code === product.code ? "active" : ""}
+                onKeyDown={(event) => moveDemoTab(event, index)}
+                onClick={() => setActiveProduct(product)}
+              >
+                <i style={{ background: product.soft, color: product.accent }}>
+                  {product.icon}
+                </i>
+                {product.shortName}
+              </button>
+            ))}
+          </div>
+          <div
+            id={`demo-panel-${activeProduct.code}`}
+            className="demo-stage"
+            role="tabpanel"
+            aria-labelledby={`demo-tab-${activeProduct.code}`}
+            tabIndex={0}
+          >
+            <div className="demo-copy">
+              <p className="eyebrow">{activeProduct.eyebrow}</p>
+              <h3>{activeProduct.name}</h3>
+              <p>{activeProduct.description}</p>
+              <ul>
+                {activeProduct.features.map((feature) => (
+                  <li key={feature}>
+                    <span>✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <div className="demo-actions">
+                <Link
+                  className="button"
+                  href={`/demos?product=${activeProduct.code}`}
+                >
+                  Open full visual demo <Arrow />
+                </Link>
+                <Link
+                  className="demo-live-link"
+                  href={`/products/${activeProduct.slug}`}
+                >
+                  See product details <Arrow />
+                </Link>
+                <Link
+                  className="demo-live-link"
+                  href={`/trial?product=${activeProduct.code}`}
+                >
+                  Request a 30-day trial <Arrow />
+                </Link>
+              </div>
+            </div>
+            <ProductMock product={activeProduct} />
+          </div>
+        </div>
+      </section>
 
-    <section className="section why-section" id="why-corecare"><div className="site-shell section-heading split-heading"><div><p className="eyebrow">A consistent product family</p><h2>Specialist products.<br />One clear starting point.</h2></div><p>Each product keeps its own registered users, database and session. The public login routes credentials to the product that owns the account; it is not a master password.</p></div><div className="site-shell benefits-grid"><article><span>01</span><h3>See it before relying on it</h3><p>Explore representative workflows, then check the current status, limitations and integrations.</p></article><article><span>02</span><h3>Routing, not a master password</h3><p>Each product validates its own registered account. If more than one accepts the credentials, you choose the destination.</p></article><article><span>03</span><h3>Readiness before production</h3><p>Scope, migration, support and critical controls are agreed before live use.</p></article></div></section>
+      <section className="section why-section" id="why-corecare">
+        <div className="site-shell section-heading split-heading">
+          <div>
+            <p className="eyebrow">A consistent product family</p>
+            <h2>
+              Specialist products.
+              <br />
+              One clear starting point.
+            </h2>
+          </div>
+          <p>
+            Each product keeps its own registered users, database and session.
+            The public login routes credentials to the product that owns the
+            account; it is not a master password.
+          </p>
+        </div>
+        <div className="site-shell benefits-grid">
+          <article>
+            <span>01</span>
+            <h3>See it before relying on it</h3>
+            <p>
+              Explore representative workflows, then check the current status,
+              limitations and integrations.
+            </p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Routing, not a master password</h3>
+            <p>
+              Each product validates its own registered account. If more than
+              one accepts the credentials, you choose the destination.
+            </p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Readiness before production</h3>
+            <p>
+              Scope, migration, support and critical controls are agreed before
+              live use.
+            </p>
+          </article>
+        </div>
+      </section>
 
-    <section className="section trust-section"><div className="site-shell"><div className="section-heading split-heading"><div><p className="eyebrow">Built for responsible operations</p><h2>Clear controls.<br />Practical protection.</h2></div><p>CoreCare products use encrypted connections, server-side access checks and expiring sessions. Product-specific recovery, backup and assurance requirements are confirmed before live use.</p></div><div className="trust-grid"><article><span aria-hidden="true">01</span><h3>Secure access</h3><p>Passwords stay with the product that owns the account. The public login never shares a session cookie between products.</p></article><article><span aria-hidden="true">02</span><h3>Separated workspaces</h3><p>Product databases and sessions remain separate, limiting the reach of any single account or service.</p></article><article><span aria-hidden="true">03</span><h3>Honest assurance</h3><p>CoreCare states current controls separately from certifications, integrations or service targets that have not been agreed.</p></article></div><div className="trust-actions"><Link className="secondary-button" href="/security">Read about security <Arrow /></Link><Link className="secondary-button" href="/privacy">Read the privacy notice <Arrow /></Link></div></div></section>
+      <section className="section trust-section">
+        <div className="site-shell">
+          <div className="section-heading split-heading">
+            <div>
+              <p className="eyebrow">Built for responsible operations</p>
+              <h2>
+                Clear controls.
+                <br />
+                Practical protection.
+              </h2>
+            </div>
+            <p>
+              CoreCare products use encrypted connections, server-side access
+              checks and expiring sessions. Product-specific recovery, backup
+              and assurance requirements are confirmed before live use.
+            </p>
+          </div>
+          <div className="trust-grid">
+            <article>
+              <span aria-hidden="true">01</span>
+              <h3>Secure access</h3>
+              <p>
+                Passwords stay with the product that owns the account. The
+                public login never shares a session cookie between products.
+              </p>
+            </article>
+            <article>
+              <span aria-hidden="true">02</span>
+              <h3>Separated workspaces</h3>
+              <p>
+                Product databases and sessions remain separate, limiting the
+                reach of any single account or service.
+              </p>
+            </article>
+            <article>
+              <span aria-hidden="true">03</span>
+              <h3>Honest assurance</h3>
+              <p>
+                CoreCare states current controls separately from certifications,
+                integrations or service targets that have not been agreed.
+              </p>
+            </article>
+          </div>
+          <div className="trust-actions">
+            <Link className="secondary-button" href="/security">
+              Read about security <Arrow />
+            </Link>
+            <Link className="secondary-button" href="/privacy">
+              Read the privacy notice <Arrow />
+            </Link>
+          </div>
+        </div>
+      </section>
 
-    <section className="section trial-section"><div className="site-shell trial-panel"><div className="trial-copy"><p className="eyebrow light-eyebrow">30 days to explore</p><h2>Try the product that fits your business.</h2><p>Start without a payment card. Your 30 days begin when your workspace is ready, and you choose whether to continue when the trial ends.</p><Link className="button light-button" href="/trial">Start your free trial <Arrow /></Link></div><div className="trial-timeline"><article><span>Today</span><i>1</i><div><strong>Choose your product</strong><small>Tell us a little about your organisation.</small></div></article><article><span>Access</span><i>2</i><div><strong>Open your workspace</strong><small>Your 30-day clock starts when access is activated.</small></div></article><article><span>Day 30</span><i>3</i><div><strong>Choose what happens next</strong><small>Choose a published plan or let access pause without charge.</small></div></article></div></div></section>
+      <section className="section trial-section">
+        <div className="site-shell trial-panel">
+          <div className="trial-copy">
+            <p className="eyebrow light-eyebrow">30 days to explore</p>
+            <h2>Try the product that fits your business.</h2>
+            <p>
+              Start without a payment card. Your 30 days begin when your
+              workspace is ready, and you choose whether to continue when the
+              trial ends.
+            </p>
+            <Link className="button light-button" href="/trial">
+              Start your free trial <Arrow />
+            </Link>
+          </div>
+          <div className="trial-timeline">
+            <article>
+              <span>Today</span>
+              <i>1</i>
+              <div>
+                <strong>Choose your product</strong>
+                <small>Tell us a little about your organisation.</small>
+              </div>
+            </article>
+            <article>
+              <span>Access</span>
+              <i>2</i>
+              <div>
+                <strong>Open your workspace</strong>
+                <small>
+                  Your 30-day clock starts when access is activated.
+                </small>
+              </div>
+            </article>
+            <article>
+              <span>Day 30</span>
+              <i>3</i>
+              <div>
+                <strong>Choose what happens next</strong>
+                <small>
+                  Choose a published plan or let access pause without charge.
+                </small>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
-    <section className="section faq-section" id="questions"><div className="site-shell faq-grid"><div><p className="eyebrow">Common questions</p><h2>Good to know<br />before you begin.</h2><p>Need a more specific answer? Book a demonstration and tell us how your team works.</p><Link className="secondary-button" href="/contact">Talk to CoreCare <Arrow /></Link></div><div className="faq-list"><details open><summary>Can I use more than one CoreCare product?<span>+</span></summary><p>Yes. Your organisation can use one product or a combination. If the same credentials are registered in more than one product, the login page gives you a clear choice.</p></details><details><summary>Do I need a payment card for the trial?<span>+</span></summary><p>No. We prepare a representative trial workspace without taking card details. Your 30 days start when access is activated.</p></details><details><summary>Can you move our existing data?<span>+</span></summary><p>Potentially. We first assess the format, quality and sensitivity of the source, then agree what can be migrated and how your team will validate it.</p></details><details><summary>Are every integration and feature live today?<span>+</span></summary><p>No blanket claim is made. Each product page separates what can be demonstrated now from items that need to be confirmed during onboarding.</p></details></div></div></section>
-  </MarketingShell>;
+      <section className="section faq-section" id="questions">
+        <div className="site-shell faq-grid">
+          <div>
+            <p className="eyebrow">Common questions</p>
+            <h2>
+              Good to know
+              <br />
+              before you begin.
+            </h2>
+            <p>
+              Need a more specific answer? Book a demonstration and tell us how
+              your team works.
+            </p>
+            <Link className="secondary-button" href="/contact">
+              Talk to CoreCare <Arrow />
+            </Link>
+          </div>
+          <div className="faq-list">
+            <details open>
+              <summary>
+                Can I use more than one CoreCare product?<span>+</span>
+              </summary>
+              <p>
+                Yes. Your organisation can use one product or a combination. If
+                the same credentials are registered in more than one product,
+                the login page gives you a clear choice.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Do I need a payment card for the trial?<span>+</span>
+              </summary>
+              <p>
+                No. We prepare a representative trial workspace without taking
+                card details. Your 30 days start when access is activated.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Can you move our existing data?<span>+</span>
+              </summary>
+              <p>
+                Potentially. We first assess the format, quality and sensitivity
+                of the source, then agree what can be migrated and how your team
+                will validate it.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Are every integration and feature live today?<span>+</span>
+              </summary>
+              <p>
+                No blanket claim is made. Each product page separates what can
+                be demonstrated now from items that need to be confirmed during
+                onboarding.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </MarketingShell>
+  );
 }

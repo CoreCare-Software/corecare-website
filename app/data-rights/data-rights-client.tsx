@@ -32,7 +32,7 @@ export default function DataRightsForm() {
     }
   }
 
-  return <form className="contact-form" onSubmit={submit}>
+  return <form className="contact-form" method="post" action="/api/privacy/requests" onSubmit={submit}>
     <input className="form-honeypot" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
     <div className="trial-form-grid">
       <label className="form-label">Your name<input name="requesterName" autoComplete="name" required /></label>

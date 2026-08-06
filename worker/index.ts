@@ -2,6 +2,15 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
+const FORM_QUERY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  "/login": ["email", "password", "productCode"],
+  "/trial": ["contactName", "email", "companyName", "phone", "teamSize", "productCode", "privacyAccepted", "website"],
+  "/contact": ["contactName", "email", "companyName", "productCode", "message", "privacyAccepted", "website"],
+  "/account-help": ["contactName", "email", "companyName", "productCode", "privacyAccepted", "website"],
+  "/data-rights": ["requesterName", "requesterEmail", "organisationName", "relationship", "requestType", "productCode", "requestSummary", "privacyAccepted", "website"],
+  "/trial/status": ["password", "confirmPassword"],
+});
+
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -11,13 +20,22 @@ import handler from "vinext/server/app-router-entry";
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const formPath = url.pathname.replace(/\/+$/, "") || "/";
+    if (request.method === "GET" && FORM_QUERY_FIELDS[formPath]?.some((field) => url.searchParams.has(field))) {
+      return withProductionHeaders(request, new Response("Form details must be submitted securely using POST.", {
+        status: 400,
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+      }));
+    }
     if (url.hostname === "corecaresystems.co.uk") {
       url.hostname = "www.corecaresystems.co.uk";
       return withProductionHeaders(request, Response.redirect(url.toString(), 308));
     }
     let response: Response;
 
-    if (url.pathname === "/_vinext/image") {
+    if (/^\/(?:assets|_next\/static)\//.test(url.pathname)) {
+      response = await env.ASSETS.fetch(request);
+    } else if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
       response = await handleImageOptimization(request, {
         fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
@@ -37,6 +55,8 @@ function withProductionHeaders(request: Request, response: Response) {
   const url = new URL(request.url);
   const result = new Response(response.body, response);
   const headers = result.headers;
+  const html = (headers.get("content-type") || "").includes("text/html");
+  const nonce = html ? crypto.randomUUID().replaceAll("-", "") : "";
   const production = url.protocol === "https:" && !["localhost", "127.0.0.1"].includes(url.hostname);
   const directives = [
     "default-src 'self'",
@@ -47,7 +67,8 @@ function withProductionHeaders(request: Request, response: Response) {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+    `script-src 'self'${nonce ? ` 'nonce-${nonce}' 'strict-dynamic'` : ""} https://challenges.cloudflare.com`,
+    "script-src-attr 'none'",
     "connect-src 'self' https://*.corecaresystems.co.uk https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
   ];
@@ -67,7 +88,12 @@ function withProductionHeaders(request: Request, response: Response) {
   } else if ((headers.get("content-type") || "").includes("text/html")) {
     headers.set("Cache-Control", "public, max-age=0, s-maxage=300, stale-while-revalidate=3600");
   }
-  return result;
+  if (!html || request.method === "HEAD" || !result.body) return result;
+  return new HTMLRewriter().on("script", {
+    element(element) {
+      element.setAttribute("nonce", nonce);
+    },
+  }).transform(result);
 }
 
 export default worker;
