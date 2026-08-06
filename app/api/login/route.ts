@@ -7,7 +7,7 @@ import { turnstileRejected, verifyTurnstile } from "../_shared/turnstile";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (value: unknown, max = 1024) => String(value ?? "").trim().slice(0, max);
 
-type BrokerMatch = { code: ProductCode | "PLATFORM"; grant: string; expiresAt?: string };
+type BrokerMatch = { code: ProductCode | "PLATFORM"; grant: string; expiresAt?: string; mfa?: boolean };
 type BrokerResult = { ok?: boolean; status?: number; matches?: BrokerMatch[] };
 type BrokerBinding = { fetch(request: Request): Promise<Response> };
 
@@ -21,14 +21,14 @@ function targetFor(match: BrokerMatch) {
   if (match.code === "PLATFORM") return {
     code: match.code,
     name: "CoreCare Administration",
-    handoffUrl: "https://owner.corecaresystems.co.uk/api/auth/portal-claim",
+    handoffUrl: match.mfa ? "https://owner.corecaresystems.co.uk/api/auth/mfa/claim" : "https://owner.corecaresystems.co.uk/api/auth/portal-claim",
     grant: match.grant,
   };
   const product = getProduct(match.code);
   return product ? {
     code: product.code,
     name: product.name,
-    handoffUrl: `${product.liveUrl.replace(/\/$/, "")}/api/auth/portal-claim`,
+    handoffUrl: `${product.liveUrl.replace(/\/$/, "")}${match.mfa ? "/api/auth/mfa/claim" : "/api/auth/portal-claim"}`,
     grant: match.grant,
   } : null;
 }
