@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { recordRuntimeError } from './runtime-errors';
 
 const PUBLIC_ASSET_PREFIX = "/_corecare-static";
 
@@ -22,6 +23,8 @@ const FORM_QUERY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fr
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const requestId = request.headers.get('cf-ray') || crypto.randomUUID();
+    try {
     const formPath = url.pathname.replace(/\/+$/, "") || "/";
     if (request.method === "GET" && FORM_QUERY_FIELDS[formPath]?.some((field) => url.searchParams.has(field))) {
       return withProductionHeaders(request, new Response("Form details must be submitted securely using POST.", {
@@ -54,6 +57,10 @@ const worker = {
       response = await handler.fetch(request, env, ctx);
     }
     return withProductionHeaders(request, response);
+    } catch (error) {
+      await recordRuntimeError(env,{requestId,productCode:'WEBSITE',route:url.pathname,method:request.method,statusCode:500,error});
+      return withProductionHeaders(request,Response.json({error:'CoreCare could not complete this request.',requestId},{status:500,headers:{'cache-control':'no-store','x-request-id':requestId}}));
+    }
   },
 };
 
