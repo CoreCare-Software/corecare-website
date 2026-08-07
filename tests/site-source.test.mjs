@@ -31,6 +31,9 @@ test("publishes precise commercial, maturity and trust information", async () =>
   assert.match(plans, /50 GB hosted storage/);
   assert.match(plans, /No VAT is currently added/);
   assert.match(plans, /What “Unlimited” does and does not mean/);
+  assert.match(plans, /CoreCare guide pricing/);
+  assert.match(plans, /Multi-product packages are priced individually/);
+  assert.match(plans, /the more products you combine, the greater the potential saving/);
   assert.match(products, /availability: "Guided evaluation"/);
   assert.match(requirements, /Not currently offered/);
   assert.match(productPage, /Current capability matrix/);
