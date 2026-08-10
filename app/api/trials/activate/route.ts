@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
+import { findTrialByAutomationToken } from "../../../../db/trial-capabilities";
+import { readJsonObject } from "../../_shared/body";
 
 const clean = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 
@@ -16,7 +18,9 @@ function safeWorkspaceUrl(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const input = await request.json() as Record<string, unknown>;
+  const parsed = await readJsonObject(request, 16_384);
+  if (!parsed.ok) return parsed.response;
+  const input = parsed.value;
   const automationToken = clean(input.automationToken, 160);
   const requestedStatus = clean(input.status, 30).toLowerCase();
   const allowedStatuses = new Set(["active", "failed", "expired", "converted"]);
@@ -25,11 +29,11 @@ export async function POST(request: Request) {
   }
 
   const db = getDb();
-  const current = await db.select().from(trialRequests).where(eq(trialRequests.automationToken, automationToken)).limit(1);
-  if (!current[0]) return Response.json({ error: "Trial request not found." }, { status: 404 });
+  const trial = await findTrialByAutomationToken(automationToken);
+  if (!trial) return Response.json({ error: "Trial request not found." }, { status: 404 });
 
   const now = new Date();
-  const activatedAt = requestedStatus === "active" ? clean(input.activatedAt, 40) || now.toISOString() : current[0].activatedAt;
+  const activatedAt = requestedStatus === "active" ? clean(input.activatedAt, 40) || now.toISOString() : trial.activatedAt;
   const parsedStart = activatedAt ? new Date(activatedAt) : now;
   const safeStart = Number.isFinite(parsedStart.getTime()) ? parsedStart : now;
   const defaultEnd = new Date(safeStart.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -41,12 +45,12 @@ export async function POST(request: Request) {
     status: requestedStatus,
     provisioningStatus: requestedStatus === "active" ? "complete" : requestedStatus,
     provisioningError: requestedStatus === "failed" ? clean(input.error, 500) || "Provisioning could not be completed." : null,
-    workspaceUrl: workspaceUrl || current[0].workspaceUrl,
+    workspaceUrl: workspaceUrl || trial.workspaceUrl,
     activatedAt,
-    trialStartedAt: requestedStatus === "active" ? safeStart.toISOString() : current[0].trialStartedAt,
-    trialEndsAt: requestedStatus === "active" ? suppliedEnd || defaultEnd : current[0].trialEndsAt,
+    trialStartedAt: requestedStatus === "active" ? safeStart.toISOString() : trial.trialStartedAt,
+    trialEndsAt: requestedStatus === "active" ? suppliedEnd || defaultEnd : trial.trialEndsAt,
     updatedAt: now.toISOString(),
-  }).where(eq(trialRequests.id, current[0].id));
+  }).where(eq(trialRequests.id, trial.id));
 
   return Response.json({ ok: true, status: requestedStatus });
 }

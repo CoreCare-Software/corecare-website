@@ -12,8 +12,8 @@ export const COMPANY_DETAILS = {
   companyNumber: null,
   vatNumber: null,
   icoApplicationReference: "C1999522",
-  icoPublicRegistrationNumber: null,
-  icoStatus: "Application submitted; public register entry awaiting publication",
+  icoPublicRegistrationNumber: "00015031228",
+  icoStatus: "Registered with the Information Commissioner's Office",
 } as const;
 
 export const CONTRACTING_NAME = `${COMPANY_DETAILS.proprietorName}, trading as ${COMPANY_DETAILS.legalName}`;

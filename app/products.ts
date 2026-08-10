@@ -47,7 +47,7 @@ export const PRODUCTS: CoreCareProduct[] = [
   {
     code: "GARAGE", slug: "garage", name: "CoreCare Garage", shortName: "Garage", eyebrow: "Workshop management",
     description: "Keep the diary moving with joined-up job cards, customers, vehicles, inspections, estimates and reminders.",
-    features: ["Workshop diary", "Jobs & inspections", "Customers & vehicles"], accent: "#b45f2a", soft: "#faeadf", icon: "GA",
+    features: ["Workshop diary", "Jobs & inspections", "Customers & vehicles"], accent: "#8f451f", soft: "#faeadf", icon: "GA",
     liveUrl: "https://garage.corecaresystems.co.uk", intendedHostname: "garage.corecaresystems.co.uk", trialAvailable: true,
     availability: "Guided evaluation", availabilityDetail: "Representative workshop workflows are available to evaluate now. Parts, MOT, messaging, payment integrations and production readiness must be agreed before live use.",
     metric: { value: "14", label: "Jobs in progress", detail: "3 ready to collect" },

@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
-import { env } from "cloudflare:workers";
 import { getDb } from "../../../../db";
 import { trialRequests } from "../../../../db/schema";
-import { allowFormRequest, recordEvent, validSameOriginRequest } from "../../_shared/forms";
+import { readJsonObject } from "../../_shared/body";
+import { allowFormRequest, recordEvent, requestAutomation, validSameOriginRequest } from "../../_shared/forms";
+import { automationTokenForTrial, findTrialByStatusToken } from "../../../../db/trial-capabilities";
 
 const clean = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 
@@ -17,7 +18,9 @@ export async function POST(request: Request) {
   if (!validSameOriginRequest(request)) return Response.json({ error: "This request could not be verified." }, { status: 403 });
   const rate = await allowFormRequest(request, "trial-password", 8, 30);
   if (!rate.allowed) return Response.json({ error: "Too many password attempts were made. Please wait and try again." }, { status: 429, headers: { "retry-after": String(rate.retryAfter) } });
-  const input = await request.json().catch(() => ({})) as Record<string, unknown>;
+  const parsed = await readJsonObject(request, 8_192);
+  if (!parsed.ok) return parsed.response;
+  const input = parsed.value;
   const token = clean(input.token, 160);
   const password = String(input.password || "");
   if (token.length < 40) return Response.json({ error: "Trial not found." }, { status: 404 });
@@ -26,22 +29,15 @@ export async function POST(request: Request) {
   }
 
   const db = getDb();
-  const rows = await db.select().from(trialRequests).where(eq(trialRequests.accessToken, token)).limit(1);
-  const trial = rows[0];
+  const trial = await findTrialByStatusToken(token);
   if (!trial) return Response.json({ error: "Trial not found." }, { status: 404 });
   if (trial.credentialsSetAt && trial.status === "active") return Response.json({ ok: true, alreadyActive: true, workspaceUrl: trial.workspaceUrl });
-  if (!trial.automationToken || trial.status !== "requested") return Response.json({ error: "This trial cannot be activated from this link." }, { status: 409 });
+  const automationToken = await automationTokenForTrial(trial);
+  if (!automationToken || trial.status !== "requested") return Response.json({ error: "This trial cannot be activated from this link." }, { status: 409 });
 
-  const runtime = env as unknown as Record<string, string | undefined>;
-  const automationUrl = runtime.CORECARE_AUTOMATION_URL || "https://corecare-platform.cselectricalservices11.workers.dev/api/public/automation";
   let response: Response;
   try {
-    response = await fetch(automationUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json", "user-agent": "corecare-systems-website/1.0" },
-      body: JSON.stringify({ kind: "trial-password", automationToken: trial.automationToken, password }),
-      signal: AbortSignal.timeout(25_000),
-    });
+    response = await requestAutomation("trial-password", { automationToken, password });
   } catch {
     return Response.json({ error: "Your workspace is still being prepared. Please try again shortly." }, { status: 503 });
   }

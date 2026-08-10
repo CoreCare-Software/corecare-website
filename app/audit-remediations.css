@@ -1,0 +1,45 @@
+/* Targeted fixes from the August 2026 live accessibility and performance audit. */
+.centered-heading > p:last-child {
+  color: #63706d;
+}
+
+.demo-section .centered-heading > p:last-child {
+  color: #b7cbc7;
+}
+
+.demo-stage .demo-copy > .eyebrow {
+  color: #66cabc;
+}
+
+.visual-capabilities article > span {
+  color: color-mix(in srgb, var(--product-accent) 55%, white);
+}
+
+.header-trial-short {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .nav-shell {
+    gap: 10px;
+  }
+
+  .brand-lockup {
+    gap: 8px;
+  }
+
+  .brand-lockup small,
+  .header-trial-full {
+    display: none;
+  }
+
+  .header-trial-short {
+    display: inline;
+  }
+
+  .nav-actions .header-trial {
+    gap: 6px;
+    padding-inline: 11px;
+    white-space: nowrap;
+  }
+}

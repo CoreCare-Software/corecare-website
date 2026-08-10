@@ -31,6 +31,9 @@ test("publishes precise commercial, maturity and trust information", async () =>
   assert.match(plans, /50 GB hosted storage/);
   assert.match(plans, /No VAT is currently added/);
   assert.match(plans, /What “Unlimited” does and does not mean/);
+  assert.match(plans, /CoreCare guide pricing/);
+  assert.match(plans, /Multi-product packages are priced individually/);
+  assert.match(plans, /the more products you combine, the greater the potential saving/);
   assert.match(products, /availability: "Guided evaluation"/);
   assert.match(requirements, /Not currently offered/);
   assert.match(productPage, /Current capability matrix/);
@@ -59,8 +62,8 @@ test("includes interactive visual workflows for every CoreCare product", async (
   assert.match(sitemap, /"\/demos"/);
 });
 
-test("includes durable trial, live checkout and product-owned login handoffs", async () => {
-  const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, worker, hosting] = await Promise.all([
+test("includes durable trial, live checkout and one-time product login grants", async () => {
+  const [schema, trialRoute, activationRoute, passwordRoute, checkoutRoute, statusClient, plansPage, loginRoute, loginClient, worker, hosting] = await Promise.all([
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/trials/activate/route.ts", import.meta.url), "utf8"),
@@ -69,6 +72,7 @@ test("includes durable trial, live checkout and product-owned login handoffs", a
     readFile(new URL("../app/trial/status/status-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/plans/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/login/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
@@ -84,9 +88,56 @@ test("includes durable trial, live checkout and product-owned login handoffs", a
   assert.match(statusClient, /Activate my 30-day trial/);
   assert.match(statusClient, /Secure live checkout/);
   assert.doesNotMatch(plansPage, /currently being verified in Stripe test mode/);
-  assert.match(loginRoute, /\/auth\/portal-login/);
-  assert.doesNotMatch(loginRoute, /Domain=\.corecaresystems\.co\.uk/);
+  assert.match(loginRoute, /requires the Cloudflare Worker runtime/);
+  assert.match(worker, /CORECARE_PLATFORM_PORTAL/);
+  assert.match(worker, /handleOneLogin/);
+  assert.match(worker, /handleMfa/);
+  assert.match(worker, /handlePasswordSetup/);
+  assert.match(worker, /verifyMfa/);
+  assert.match(worker, /completePasswordSetup/);
+  assert.match(worker, /\.code\) !== "MARKETING"/);
+  assert.match(loginClient, /result\.products \|\| result\.choices/);
+  assert.match(loginClient, /Object\.entries\(\{\s*grant: choice\.grant,\s*returnTo:/);
+  assert.doesNotMatch(loginClient, /Object\.entries\(\{ email, password/);
+  assert.doesNotMatch(worker, /workers\.dev/);
+  assert.doesNotMatch(worker, /Domain=\.corecaresystems\.co\.uk/);
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /Strict-Transport-Security/);
   assert.equal(JSON.parse(hosting).d1, "DB");
+});
+
+test("protects every public write form with end-to-end Turnstile validation", async () => {
+  const [widget, helper, loginPage, loginClient, trialClient, contactClient, rightsClient, loginWorker, trialRoute, contactRoute, rightsRoute, config] = await Promise.all([
+    readFile(new URL("../app/turnstile-widget.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/_shared/turnstile.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/trial/trial-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/contact/contact-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/data-rights/data-rights-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/trials/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/contact/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/privacy/requests/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+  ]);
+  assert.match(widget, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/);
+  assert.match(widget, /window\.turnstile\.reset/);
+  for (const [source, action] of [[loginClient, "login"], [trialClient, "trial"], [contactClient, "contact"], [rightsClient, "data_rights"]]) {
+    assert.match(source, new RegExp(`action="${action}"`));
+    assert.match(source, /turnstileToken/);
+  }
+  for (const [source, action] of [[loginWorker, "login"], [trialRoute, "trial"], [contactRoute, "contact"], [rightsRoute, "data_rights"]]) {
+    assert.match(source, new RegExp(`verifyTurnstile\\(request, .*turnstileToken, "${action}"\\)`));
+  }
+  assert.match(helper, /result\.success === true/);
+  assert.match(helper, /result\.action === expectedAction/);
+  assert.match(helper, /expectedHostnames\.has/);
+  assert.match(helper, /AbortSignal\.timeout\(10_000\)/);
+  assert.match(loginPage, /host !== "login\.corecaresystems\.co\.uk"/);
+  assert.match(loginPage, /redirect\(destination\.toString\(\)\)/);
+  assert.match(config, /"pattern": "login\.corecaresystems\.co\.uk"/);
+  assert.doesNotMatch(config, /"pattern": "www\.corecaresystems\.co\.uk"/);
+  assert.match(config, /TURNSTILE_HOSTNAMES/);
+  assert.doesNotMatch(config, /TURNSTILE_SECRET/);
 });

@@ -43,15 +43,20 @@ export async function recordEvent(eventName: string, details: { productCode?: st
   }
 }
 
-export async function dispatchAutomation(kind: "trial" | "trial-checkout" | "trial-billing-status" | "contact", payload: Record<string, unknown>) {
-  const runtime = env as unknown as Record<string, string | undefined>;
-  const url = runtime.CORECARE_AUTOMATION_URL || "https://corecare-platform.cselectricalservices11.workers.dev/api/public/automation";
-  const response = await fetch(url, {
+type ServiceBinding = { fetch(request: Request): Promise<Response> };
+
+export async function requestAutomation(kind: "trial" | "trial-password" | "trial-checkout" | "trial-billing-status" | "contact", payload: Record<string, unknown>) {
+  const runtime = env as unknown as { CORECARE_PLATFORM_AUTOMATION?: ServiceBinding };
+  if (!runtime.CORECARE_PLATFORM_AUTOMATION?.fetch) throw new Error("automation_not_configured");
+  return runtime.CORECARE_PLATFORM_AUTOMATION.fetch(new Request("https://platform-automation.internal/api/public/automation", {
     method: "POST",
     headers: { "content-type": "application/json", "user-agent": "corecare-systems-website/1.0" },
     body: JSON.stringify({ kind, ...payload }),
-    signal: AbortSignal.timeout(20_000),
-  });
+  }));
+}
+
+export async function dispatchAutomation(kind: "trial" | "trial-checkout" | "trial-billing-status" | "contact", payload: Record<string, unknown>) {
+  const response = await requestAutomation(kind, payload);
   if (!response.ok) throw new Error(`automation_${response.status}`);
   const result = await response.json().catch(() => ({})) as Record<string, unknown>;
   return { dispatched: true as const, result };
