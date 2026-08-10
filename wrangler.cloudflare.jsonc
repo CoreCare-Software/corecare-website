@@ -8,6 +8,13 @@
   "assets": {
     "directory": "./dist/client"
   },
+  "services": [
+    {
+      "binding": "CORECARE_PLATFORM_PORTAL",
+      "service": "corecare-platform",
+      "entrypoint": "PortalBroker"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
