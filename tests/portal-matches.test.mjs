@@ -38,12 +38,38 @@ test('includes Marketing automatically once Platform supplies a valid handoff', 
 test('keeps ready and not-yet-ready products distinct for multi-product users', () => {
   const result = normalisePortalMatches({
     matches: [
-      { code: 'CARE', name: 'CoreCare Care', action: 'https://care.example/auth', grant: 'care-grant' },
+      { code: 'CARE', name: 'CoreCare Care', action: 'https://care.corecaresystems.co.uk/auth/portal-login', grant: 'care-grant' },
       { code: 'MARKETING', name: 'CoreCare Marketing', reason: 'MARKETING_NOT_IN_ONE_LOGIN' },
     ],
   });
   assert.deepEqual(result.ready.map(item => item.code), ['CARE']);
   assert.deepEqual(result.unavailable.map(item => item.code), ['MARKETING']);
+});
+
+test('accepts only exact product targets for the Website environment', () => {
+  const stagingAction = 'https://corecare-care-staging.cselectricalservices11.workers.dev/auth/portal-login';
+  const staging = normalisePortalMatches({
+    matches: [{ code: 'CARE', name: 'CoreCare Care', action: stagingAction, grant: 'care-grant' }],
+  }, 'staging');
+  assert.equal(staging.ready.length, 1);
+  assert.equal(staging.ready[0].handoffUrl, stagingAction);
+
+  const crossEnvironment = normalisePortalMatches({
+    matches: [{
+      code: 'CARE',
+      name: 'CoreCare Care',
+      action: 'https://care.corecaresystems.co.uk/auth/portal-login',
+      grant: 'care-grant',
+    }],
+  }, 'staging');
+  assert.equal(crossEnvironment.ready.length, 0);
+  assert.equal(crossEnvironment.unavailable[0].reason, 'HANDOFF_TARGET_INVALID');
+
+  const arbitrary = normalisePortalMatches({
+    matches: [{ code: 'CARE', name: 'CoreCare Care', action: 'https://example.test/collect', grant: 'care-grant' }],
+  });
+  assert.equal(arbitrary.ready.length, 0);
+  assert.equal(arbitrary.unavailable[0].reason, 'HANDOFF_TARGET_INVALID');
 });
 
 test('the client does not auto-redirect past an unavailable assigned product', async () => {

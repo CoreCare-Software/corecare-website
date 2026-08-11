@@ -16,11 +16,18 @@ type LoginQuery = {
   state?: string;
 };
 
+const LOGIN_HOSTS = new Set([
+  "login.corecaresystems.co.uk",
+  "corecare-website-staging.cselectricalservices11.workers.dev",
+  "localhost",
+  "127.0.0.1",
+]);
+
 export default async function LoginPage({ searchParams }: { searchParams: Promise<LoginQuery> }) {
   const query = await searchParams;
   const requestHeaders = await headers();
   const host = (requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "").split(":", 1)[0].toLowerCase();
-  if (host && host !== "login.corecaresystems.co.uk" && host !== "localhost" && host !== "127.0.0.1") {
+  if (host && !LOGIN_HOSTS.has(host)) {
     const destination = new URL("https://login.corecaresystems.co.uk/login");
     if (query.product) destination.searchParams.set("product", query.product);
     if (query.error) destination.searchParams.set("error", query.error);

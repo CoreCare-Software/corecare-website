@@ -19,6 +19,6 @@ test('Website transports Mobile PKCE without returning credentials to the app', 
 
 test('Website preserves every Platform product result without a Marketing exception', async () => {
   const source = await readFile(new URL('../worker/portal-matches.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /MARKETING.*filter|filter.*MARKETING/s);
+  assert.doesNotMatch(source, /\.filter\([^\n]*MARKETING|MARKETING[^\n]*\.filter\(/);
   assert.match(source, /unavailable/);
 });

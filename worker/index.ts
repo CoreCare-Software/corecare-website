@@ -7,6 +7,21 @@ import { recordRuntimeError } from "./runtime-errors";
 import { normalisePortalMatches } from "./portal-matches.js";
 
 const PUBLIC_ASSET_PREFIX = "/_corecare-static";
+const STAGING_WEBSITE_HOST = "corecare-website-staging.cselectricalservices11.workers.dev";
+const STAGING_HANDOFF_ORIGINS = Object.freeze([
+  "https://corecare-care-staging.cselectricalservices11.workers.dev",
+  "https://corecare-campsite-staging.cselectricalservices11.workers.dev",
+  "https://corecare-finance-staging.cselectricalservices11.workers.dev",
+  "https://corecare-garage-staging.cselectricalservices11.workers.dev",
+  "https://corecare-marketing-staging.cselectricalservices11.workers.dev",
+  "https://corecare-pos-staging.cselectricalservices11.workers.dev",
+]);
+
+function websiteEnvironment(request: Request): "production" | "staging" {
+  return new URL(request.url).hostname === STAGING_WEBSITE_HOST
+    ? "staging"
+    : "production";
+}
 
 interface PortalBinding extends Fetcher {
   verifyMfa(input: Record<string, unknown>): Promise<Record<string, unknown>>;
@@ -308,7 +323,7 @@ async function handleOneLogin(request: Request, env: Env): Promise<Response> {
     path: "/login",
     outcome: payload.ok === true ? (matchCount > 1 ? "multiple" : matchCount === 1 ? "single" : "none") : String(payload.code || upstream.status),
   });
-  return portalResult(payload, upstream.status);
+  return portalResult(payload, upstream.status, websiteEnvironment(request));
 }
 
 async function handleMfa(request: Request, env: Env): Promise<Response> {
@@ -316,17 +331,21 @@ async function handleMfa(request: Request, env: Env): Promise<Response> {
   let input: Record<string, unknown>; try { input = await request.json() as Record<string, unknown>; } catch { return Response.json({ error: "Enter the current Authenticator code." }, { status: 400 }); }
   const payload = await env.CORECARE_PLATFORM_PORTAL.verifyMfa({ ...input, ip: request.headers.get("cf-connecting-ip") || "website", userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0" });
   if (String(payload.code || "") === "PASSWORD_CHANGE_REQUIRED" && payload.setup) return Response.json({ ok: true, stage: "password", setup: payload.setup, recoveryCodes: payload.recoveryCodes || [] }, { status: 202 });
-  return portalResult(payload, Number(payload.status || 200));
+  return portalResult(payload, Number(payload.status || 200), websiteEnvironment(request));
 }
 
 async function handlePasswordSetup(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return Response.json({ error: "Use POST to finish account setup." }, { status: 405, headers: { Allow: "POST" } });
   let input: Record<string, unknown>; try { input = await request.json() as Record<string, unknown>; } catch { return Response.json({ error: "Enter and confirm your new password." }, { status: 400 }); }
   const payload = await env.CORECARE_PLATFORM_PORTAL.completePasswordSetup({ ...input, ip: request.headers.get("cf-connecting-ip") || "website", userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0" });
-  return portalResult(payload, Number(payload.status || 200));
+  return portalResult(payload, Number(payload.status || 200), websiteEnvironment(request));
 }
 
-function portalResult(payload: Record<string, unknown>, status: number): Response {
+function portalResult(
+  payload: Record<string, unknown>,
+  status: number,
+  environment: "production" | "staging",
+): Response {
   if (payload.ok !== true) {
     const code = String(payload.code || "INVALID_CREDENTIALS");
     const messages: Record<string, string> = {
@@ -339,7 +358,7 @@ function portalResult(payload: Record<string, unknown>, status: number): Respons
     return Response.json({ error: String(payload.message || messages[code] || "The email address or password is incorrect."), code }, { status: status === 429 ? 429 : status >= 500 ? 503 : status >= 400 ? status : 401 });
   }
 
-  const { ready: choices, unavailable } = normalisePortalMatches(payload);
+  const { ready: choices, unavailable } = normalisePortalMatches(payload, environment);
   if (!choices.length && unavailable.length) {
     const names = unavailable.map((item: { name: string }) => item.name).join(", ");
     return Response.json({
@@ -368,7 +387,11 @@ function withProductionHeaders(request: Request, response: Response) {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    "form-action 'self' https://*.corecaresystems.co.uk",
+    `form-action 'self' ${
+      websiteEnvironment(request) === "staging"
+        ? STAGING_HANDOFF_ORIGINS.join(" ")
+        : "https://*.corecaresystems.co.uk"
+    }`,
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
