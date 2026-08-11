@@ -22,17 +22,6 @@
   "images": {
     "binding": "IMAGES"
   },
-  "services": [
-    {
-      "binding": "CORECARE_PLATFORM",
-      "service": "corecare-platform",
-      "entrypoint": "PortalBroker"
-    },
-    {
-      "binding": "CORECARE_PLATFORM_AUTOMATION",
-      "service": "corecare-platform"
-    }
-  ],
   "vars": {
     "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com",
     "TURNSTILE_HOSTNAMES": "corecaresystems.co.uk,www.corecaresystems.co.uk,login.corecaresystems.co.uk"
@@ -42,6 +31,10 @@
       "binding": "CORECARE_PLATFORM_PORTAL",
       "service": "corecare-platform",
       "entrypoint": "PortalBroker"
+    },
+    {
+      "binding": "CORECARE_PLATFORM_AUTOMATION",
+      "service": "corecare-platform"
     }
   ],
   "d1_databases": [
@@ -72,20 +65,15 @@
         "binding": "IMAGES"
       },
       "services": [
-      {
-        "binding": "CORECARE_PLATFORM",
-        "service": "corecare-platform-staging",
-        "entrypoint": "PortalBroker"
-      },
-      {
-        "binding": "CORECARE_PLATFORM_PORTAL",
-        "service": "corecare-platform-staging",
-        "entrypoint": "PortalBroker"
-      },
-      {
-        "binding": "CORECARE_PLATFORM_AUTOMATION",
-        "service": "corecare-platform-staging"
-      }
+        {
+          "binding": "CORECARE_PLATFORM_PORTAL",
+          "service": "corecare-platform-staging",
+          "entrypoint": "PortalBroker"
+        },
+        {
+          "binding": "CORECARE_PLATFORM_AUTOMATION",
+          "service": "corecare-platform-staging"
+        }
       ],
       "vars": {
         "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com",

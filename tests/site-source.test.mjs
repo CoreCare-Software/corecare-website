@@ -95,7 +95,9 @@ test("includes durable trial, live checkout and one-time product login grants", 
   assert.match(worker, /handlePasswordSetup/);
   assert.match(worker, /verifyMfa/);
   assert.match(worker, /completePasswordSetup/);
-  assert.match(worker, /\.code\) !== "MARKETING"/);
+  assert.doesNotMatch(worker, /\.code\) !== "MARKETING"/);
+  assert.match(worker, /normalisePortalMatches\(payload\)/);
+  assert.match(worker, /unavailableProducts: unavailable/);
   assert.match(loginClient, /result\.products \|\| result\.choices/);
   assert.match(loginClient, /Object\.entries\(\{\s*grant: choice\.grant,\s*returnTo:/);
   assert.doesNotMatch(loginClient, /Object\.entries\(\{ email, password/);

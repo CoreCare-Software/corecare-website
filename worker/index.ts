@@ -4,6 +4,7 @@ import handler from "vinext/server/app-router-entry";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../app/api/_shared/forms";
 import { turnstileRejected, verifyTurnstile } from "../app/api/_shared/turnstile";
 import { recordRuntimeError } from "./runtime-errors";
+import { normalisePortalMatches } from "./portal-matches.js";
 
 const PUBLIC_ASSET_PREFIX = "/_corecare-static";
 
@@ -34,12 +35,6 @@ const FORM_QUERY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fr
   "/data-rights": ["requesterName", "requesterEmail", "organisationName", "relationship", "requestType", "productCode", "requestSummary", "privacyAccepted", "website"],
   "/trial/status": ["password", "confirmPassword"],
 });
-
-// Image security config. SVG sources with .svg extension auto-skip the
-// optimization endpoint on the client side (served directly, no proxy).
-// To route SVGs through the optimizer (with security headers), set
-// dangerouslyAllowSVG: true in next.config.js and uncomment below:
-// const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -268,22 +263,26 @@ function portalResult(payload: Record<string, unknown>, status: number): Respons
       MFA_REQUIRED: "Complete the account security check before opening a product.",
       NO_PRODUCT_ACCESS: "This account does not currently have an available CoreCare product.",
       PRODUCT_DISABLED: "That CoreCare product is not available yet.",
+      PRODUCT_LOGIN_NOT_READY: "Your product access exists, but its One Login handoff is not ready yet.",
     };
     return Response.json({ error: String(payload.message || messages[code] || "The email address or password is incorrect."), code }, { status: status === 429 ? 429 : status >= 500 ? 503 : status >= 400 ? status : 401 });
   }
-  const matches = Array.isArray(payload.matches) ? payload.matches : [];
-  const choices = matches.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object") && String((item as Record<string, unknown>).code) !== "MARKETING").map(item => ({
-    code: String(item.code || ""), productCode: String(item.code || ""), product: String(item.code || ""),
-    name: String(item.name || item.code || "CoreCare"), label: String(item.name || item.code || "CoreCare"),
-    description: String(item.description || "Open this CoreCare workspace."),
-    action: String(item.action || ""), portalUrl: String(item.action || ""),
-    grant: String(item.grant || ""), returnTo: String(item.returnTo || "/"), mfa: item.mfa === true,
-    handoffUrl: String(item.action || ""),
-  })).filter(item => item.code && item.action && item.grant);
+
+  const { ready: choices, unavailable } = normalisePortalMatches(payload);
+  if (!choices.length && unavailable.length) {
+    const names = unavailable.map((item: { name: string }) => item.name).join(", ");
+    return Response.json({
+      error: `Your account has access to ${names}, but its One Login handoff is not ready. No access has been removed.`,
+      code: "PRODUCT_LOGIN_NOT_READY",
+      unavailableProducts: unavailable,
+    }, { status: 409, headers: { "cache-control": "no-store" } });
+  }
   if (!choices.length) return Response.json({ error: "This account does not currently have an available CoreCare product.", code: "NO_PRODUCT_ACCESS" }, { status: 403 });
+
+  const common = { unavailableProducts: unavailable, recoveryCodes: payload.recoveryCodes || [] };
   return choices.length === 1
-    ? Response.json({ ok: true, handoff: choices[0], choices: [], recoveryCodes: payload.recoveryCodes || [] })
-    : Response.json({ ok: true, choices, products: choices, recoveryCodes: payload.recoveryCodes || [] });
+    ? Response.json({ ok: true, handoff: choices[0], choices: [], ...common })
+    : Response.json({ ok: true, choices, products: choices, ...common });
 }
 
 function withProductionHeaders(request: Request, response: Response) {
