@@ -96,12 +96,13 @@ test("includes durable trial, live checkout and one-time product login grants", 
   assert.match(worker, /verifyMfa/);
   assert.match(worker, /completePasswordSetup/);
   assert.doesNotMatch(worker, /\.code\) !== "MARKETING"/);
-  assert.match(worker, /normalisePortalMatches\(payload\)/);
+  assert.match(worker, /normalisePortalMatches\(payload, environment\)/);
   assert.match(worker, /unavailableProducts: unavailable/);
   assert.match(loginClient, /result\.products \|\| result\.choices/);
   assert.match(loginClient, /Object\.entries\(\{\s*grant: choice\.grant,\s*returnTo:/);
   assert.doesNotMatch(loginClient, /Object\.entries\(\{ email, password/);
-  assert.doesNotMatch(worker, /workers\.dev/);
+  assert.match(worker, /corecare-website-staging\.cselectricalservices11\.workers\.dev/);
+  assert.doesNotMatch(worker, /https:\/\/[^"'\s]*workers\.dev(?!["'\s,\]])/);
   assert.doesNotMatch(worker, /Domain=\.corecaresystems\.co\.uk/);
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /Strict-Transport-Security/);
@@ -136,7 +137,8 @@ test("protects every public write form with end-to-end Turnstile validation", as
   assert.match(helper, /result\.action === expectedAction/);
   assert.match(helper, /expectedHostnames\.has/);
   assert.match(helper, /AbortSignal\.timeout\(10_000\)/);
-  assert.match(loginPage, /host !== "login\.corecaresystems\.co\.uk"/);
+  assert.match(loginPage, /!LOGIN_HOSTS\.has\(host\)/);
+  assert.match(loginPage, /corecare-website-staging\.cselectricalservices11\.workers\.dev/);
   assert.match(loginPage, /redirect\(destination\.toString\(\)\)/);
   assert.match(config, /"pattern": "login\.corecaresystems\.co\.uk"/);
   assert.doesNotMatch(config, /"pattern": "www\.corecaresystems\.co\.uk"/);

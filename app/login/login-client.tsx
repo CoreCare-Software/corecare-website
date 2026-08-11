@@ -47,14 +47,26 @@ type AuthResult = {
   choices?: ProductChoice[];
   unavailableProducts?: UnavailableProduct[];
   recoveryCodes?: string[];
+  redirectUrl?: string;
+  expiresAt?: string;
+};
+
+type MobileAuthorization = {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  state: string;
 };
 
 export default function LoginClient({
   initialProduct = "",
   initialError = "",
+  mobileAuthorization = null,
 }: {
   initialProduct?: string;
   initialError?: string;
+  mobileAuthorization?: MobileAuthorization | null;
 }) {
   const validInitial = CUSTOMER_PRODUCTS.some((item) => item.code === initialProduct.toUpperCase())
     ? initialProduct.toUpperCase()
@@ -73,6 +85,7 @@ export default function LoginClient({
   const [capsLock, setCapsLock] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstile = useRef<TurnstileHandle>(null);
+  const isMobileAuthorization = Boolean(mobileAuthorization);
 
   function handoff(choice: ProductChoice) {
     const form = document.createElement("form");
@@ -156,10 +169,17 @@ export default function LoginClient({
     setUnavailableProducts([]);
     const form = new FormData(event.currentTarget);
     try {
-      continueWith(await request("/api/login", {
+      const result = await request(isMobileAuthorization ? "/api/mobile-login" : "/api/login", {
         ...Object.fromEntries(form.entries()),
         turnstileToken,
-      }));
+        ...(mobileAuthorization || {}),
+      });
+      if (isMobileAuthorization) {
+        if (!result.redirectUrl) throw new Error(result.error || "CoreCare could not create the secure Mobile handoff.");
+        window.location.assign(result.redirectUrl);
+      } else {
+        continueWith(result);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "We could not reach the CoreCare login service.");
     } finally {
@@ -237,13 +257,17 @@ export default function LoginClient({
 
           {stage === "credentials" ? (
             <>
-              <p>Sign in once. CoreCare will show only the products assigned to you.</p>
+              <p>
+                {isMobileAuthorization
+                  ? "Sign in with Platform One Login. Your password remains inside this protected browser flow and is never returned to the Mobile app."
+                  : "Sign in once. CoreCare will show only the products assigned to you."}
+              </p>
               <form method="post" action="/api/login" onSubmit={submitCredentials}>
                 <label className="form-label">
                   Email address
                   <input type="email" name="email" autoComplete="username" required />
                 </label>
-                <label className="form-label">
+                {!isMobileAuthorization ? <label className="form-label">
                   Product
                   <select name="productCode" value={product} onChange={(event) => setProduct(event.target.value)}>
                     <option value="">Show all my products</option>
@@ -251,7 +275,7 @@ export default function LoginClient({
                       <option key={item.code} value={item.code}>{item.name}</option>
                     ))}
                   </select>
-                </label>
+                </label> : <input type="hidden" name="productCode" value="CARE" />}
                 <label className="form-label">
                   Password
                   <span className="password-field">
@@ -278,7 +302,7 @@ export default function LoginClient({
                 </label>
                 <TurnstileWidget ref={turnstile} action="login" onToken={setTurnstileToken} />
                 <button className="button auth-submit" disabled={busy || !turnstileToken}>
-                  {busy ? "Checking your account..." : "Continue securely"}
+                  {busy ? "Checking your account..." : isMobileAuthorization ? "Continue to CoreCare Mobile" : "Continue securely"}
                 </button>
               </form>
             </>

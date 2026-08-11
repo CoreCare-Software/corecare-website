@@ -34,4 +34,8 @@ test("production and staging expose the exact Website Platform bindings", async 
   assert.equal(staging.CORECARE_PLATFORM_PORTAL.service, "corecare-platform-staging");
   assert.equal(staging.CORECARE_PLATFORM_PORTAL.entrypoint, "PortalBroker");
   assert.equal(staging.CORECARE_PLATFORM_AUTOMATION.service, "corecare-platform-staging");
+  assert.equal(
+    config.env.staging.vars.TURNSTILE_HOSTNAMES,
+    "corecare-website-staging.cselectricalservices11.workers.dev",
+  );
 });

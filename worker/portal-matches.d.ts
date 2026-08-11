@@ -16,7 +16,10 @@ export type PortalProductMatch = {
 
 export type UnavailablePortalProduct = Pick<PortalProductMatch, "code" | "name" | "description" | "reason">;
 
-export function normalisePortalMatches(payload: unknown): {
+export function normalisePortalMatches(
+  payload: unknown,
+  environment?: "production" | "staging",
+): {
   ready: PortalProductMatch[];
   unavailable: UnavailablePortalProduct[];
 };

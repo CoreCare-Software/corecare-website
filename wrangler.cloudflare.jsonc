@@ -77,7 +77,7 @@
       ],
       "vars": {
         "CORECARE_OWNER_EMAILS": "chriswarman21@yahoo.co.uk,ekgeneralstore@gmail.com",
-        "TURNSTILE_HOSTNAMES": "localhost,127.0.0.1"
+        "TURNSTILE_HOSTNAMES": "corecare-website-staging.cselectricalservices11.workers.dev"
       },
       "d1_databases": [
         {
