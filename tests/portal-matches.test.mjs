@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { normalisePortalMatches } from '../worker/portal-matches.js';
 
 test('does not silently remove Marketing from Platform matches', () => {
@@ -43,4 +44,11 @@ test('keeps ready and not-yet-ready products distinct for multi-product users', 
   });
   assert.deepEqual(result.ready.map(item => item.code), ['CARE']);
   assert.deepEqual(result.unavailable.map(item => item.code), ['MARKETING']);
+});
+
+test('the client does not auto-redirect past an unavailable assigned product', async () => {
+  const source = await readFile(new URL('../app/login/login-client.tsx', import.meta.url), 'utf8');
+  assert.match(source, /if \(result\.handoff\) \{\s*if \(unavailable\.length\)/s);
+  assert.match(source, /Assigned products awaiting secure One Login/);
+  assert.match(source, /setUnavailableProducts\(unavailable\)/);
 });
