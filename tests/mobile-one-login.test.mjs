@@ -25,12 +25,51 @@ test("mobile login uses fixed client, callback, PKCE and state boundaries", asyn
   assert.doesNotMatch(client, /searchParams\.set\("(?:email|password)"/);
   assert.match(worker, /authorizeMobile\(input: Record<string, unknown>\)/);
   assert.match(worker, /handleMobileLogin/);
-  assert.match(worker, /verifyTurnstile\(request, input\.turnstileToken, "login"\)/);
+  assert.match(worker, /verifyTurnstileDetailed\(request, input\.turnstileToken, "login"\)/);
   assert.match(worker, /allowFormRequest\(request, "mobile-login-portal", 10, 15\)/);
   assert.match(worker, /MFA_REQUIRED/);
   assert.match(worker, /validatedMobileCallback/);
   assert.doesNotMatch(worker, /console\.(?:log|info|warn|error)\([^\n]*(?:password|codeChallenge|redirectUrl)/i);
   assert.match(fallback, /requires the Cloudflare Worker runtime/);
+});
+
+test("mobile login retains exactly the active Turnstile response and blocks early submission", async () => {
+  const [client, widget] = await Promise.all([
+    read("app/mobile-login/mobile-login-client.tsx"),
+    read("app/turnstile-widget.tsx"),
+  ]);
+
+  assert.match(client, /const turnstileToken = useRef\(""\)/);
+  assert.match(client, /const activeTurnstileToken = turnstileToken\.current/);
+  assert.match(client, /turnstileToken: activeTurnstileToken/);
+  assert.match(client, /disabled=!authorization \|\| busy \|\| !turnstileReady|disabled=\{!authorization \|\| busy \|\| !turnstileReady\}/);
+  assert.match(client, /turnstileToken\.current = ""/);
+  assert.match(client, /response\.headers\.get\("x-request-id"\)/);
+
+  assert.match(widget, /"expired-callback": \(\) => clear\("expired"\)/);
+  assert.match(widget, /"timeout-callback": \(\) => clear\("timeout"\)/);
+  assert.match(widget, /"error-callback": \(\) =>/);
+  assert.match(widget, /return true/);
+});
+
+test("server-side Turnstile verification is fail-closed, correlated and proxy-safe", async () => {
+  const [turnstile, worker] = await Promise.all([
+    read("app/api/_shared/turnstile.ts"),
+    read("worker/index.ts"),
+  ]);
+
+  assert.match(turnstile, /idempotency_key: crypto\.randomUUID\(\)/);
+  assert.doesNotMatch(turnstile, /remoteip/);
+  assert.match(turnstile, /timeout-or-duplicate/);
+  assert.match(turnstile, /invalid-input-secret/);
+  assert.match(turnstile, /SECURITY_VERIFICATION_UNAVAILABLE/);
+  assert.match(turnstile, /SECURITY_VERIFICATION_EXPIRED/);
+  assert.match(turnstile, /x-request-id/);
+
+  assert.match(worker, /mobile_login_turnstile/);
+  assert.match(worker, /outcome: turnstile\.reason/);
+  assert.match(worker, /turnstileRejected\(turnstile, requestId\)/);
+  assert.match(worker, /x-request-id/);
 });
 
 test("staging mobile login keeps authorization and Turnstile on the staging Website worker", async () => {
