@@ -49,6 +49,9 @@ type AuthResult = {
   recoveryCodes?: string[];
 };
 
+const STAGING_LOGIN_HOST = "corecare-website-staging.cselectricalservices11.workers.dev";
+const STAGING_PRODUCT_HOST = /^corecare-(?:care|pos|finance|garage|campsite|marketing)-staging\.cselectricalservices11\.workers\.dev$/;
+
 export default function LoginClient({
   initialProduct = "",
   initialError = "",
@@ -75,9 +78,27 @@ export default function LoginClient({
   const turnstile = useRef<TurnstileHandle>(null);
 
   function handoff(choice: ProductChoice) {
+    let action: URL;
+    try {
+      action = new URL(choice.handoffUrl);
+    } catch {
+      setMessage("CoreCare returned an invalid product handoff. No product session was created.");
+      return;
+    }
+    const stagingLogin = window.location.hostname === STAGING_LOGIN_HOST;
+    const productionTarget = action.protocol === "https:" && (
+      action.hostname === "corecaresystems.co.uk" || action.hostname.endsWith(".corecaresystems.co.uk")
+    );
+    const stagingTarget = action.protocol === "https:" && STAGING_PRODUCT_HOST.test(action.hostname);
+    if (!choice.grant || (stagingLogin ? !stagingTarget : !productionTarget)) {
+      setMessage(stagingLogin
+        ? "CoreCare blocked a handoff outside staging. Your session and production products were not changed."
+        : "CoreCare blocked an unrecognised product handoff. No product session was created.");
+      return;
+    }
     const form = document.createElement("form");
     form.method = "POST";
-    form.action = choice.handoffUrl;
+    form.action = action.toString();
     form.hidden = true;
     for (const [name, value] of Object.entries({
       grant: choice.grant,

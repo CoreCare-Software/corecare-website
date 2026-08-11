@@ -136,7 +136,8 @@ test("protects every public write form with end-to-end Turnstile validation", as
   assert.match(helper, /result\.action === expectedAction/);
   assert.match(helper, /expectedHostnames\.has/);
   assert.match(helper, /AbortSignal\.timeout\(10_000\)/);
-  assert.match(loginPage, /host !== "login\.corecaresystems\.co\.uk"/);
+  assert.match(loginPage, /"login\.corecaresystems\.co\.uk"/);
+  assert.match(loginPage, /LOGIN_HOSTS\.has\(host\)/);
   assert.match(loginPage, /redirect\(destination\.toString\(\)\)/);
   assert.match(config, /"pattern": "login\.corecaresystems\.co\.uk"/);
   assert.doesNotMatch(config, /"pattern": "www\.corecaresystems\.co\.uk"/);
