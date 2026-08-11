@@ -79,6 +79,14 @@ export async function verifyTurnstileDetailed(
   if (originalToken.length > 2_048) return { ok: false, reason: "invalid_response" };
   if (!secret || expectedHostnames.size === 0) return { ok: false, reason: "configuration" };
 
+  let requestHostname = "";
+  try {
+    requestHostname = new URL(request.url).hostname.toLowerCase();
+  } catch {
+    return { ok: false, reason: "hostname_mismatch" };
+  }
+  if (!expectedHostnames.has(requestHostname)) return { ok: false, reason: "hostname_mismatch" };
+
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
@@ -98,7 +106,9 @@ export async function verifyTurnstileDetailed(
     const action = clean(result.action, 80);
     const hostname = clean(result.hostname, 253).toLowerCase();
     if (action !== expectedAction) return { ok: false, reason: "action_mismatch" };
-    if (!expectedHostnames.has(hostname)) return { ok: false, reason: "hostname_mismatch" };
+    if (!expectedHostnames.has(hostname) || hostname !== requestHostname) {
+      return { ok: false, reason: "hostname_mismatch" };
+    }
     return { ok: true, action, hostname };
   } catch {
     return { ok: false, reason: "provider_unavailable" };
