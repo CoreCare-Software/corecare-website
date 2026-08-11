@@ -2,7 +2,7 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { allowFormRequest, recordEvent, validSameOriginRequest } from "../app/api/_shared/forms";
-import { turnstileRejected, verifyTurnstile } from "../app/api/_shared/turnstile";
+import { turnstileRejected, verifyTurnstile, verifyTurnstileDetailed } from "../app/api/_shared/turnstile";
 import { recordRuntimeError } from "./runtime-errors";
 import { normalisePortalMatches } from "./portal-matches.js";
 
@@ -39,51 +39,54 @@ const FORM_QUERY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fr
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    const requestId = request.headers.get('cf-ray') || crypto.randomUUID();
+    const requestId = request.headers.get("cf-ray") || crypto.randomUUID();
     try {
-    const formPath = url.pathname.replace(/\/+$/, "") || "/";
-    if (request.method === "GET" && FORM_QUERY_FIELDS[formPath]?.some((field) => url.searchParams.has(field))) {
-      return withProductionHeaders(request, new Response("Form details must be submitted securely using POST.", {
-        status: 400,
-        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
-      }));
-    }
-    if (url.hostname === "corecaresystems.co.uk") {
-      url.hostname = "www.corecaresystems.co.uk";
-      return withProductionHeaders(request, Response.redirect(url.toString(), 308));
-    }
-    let response: Response;
+      const formPath = url.pathname.replace(/\/+$/, "") || "/";
+      if (request.method === "GET" && FORM_QUERY_FIELDS[formPath]?.some((field) => url.searchParams.has(field))) {
+        return withProductionHeaders(request, new Response("Form details must be submitted securely using POST.", {
+          status: 400,
+          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+        }));
+      }
+      if (url.hostname === "corecaresystems.co.uk") {
+        url.hostname = "www.corecaresystems.co.uk";
+        return withProductionHeaders(request, Response.redirect(url.toString(), 308));
+      }
+      let response: Response;
 
-    if (url.pathname === "/api/login") {
-      response = await handleOneLogin(request, env);
-    } else if (url.pathname === "/api/mobile-login") {
-      response = await handleMobileLogin(request, env);
-    } else if (url.pathname === "/api/login/mfa") {
-      response = await handleMfa(request, env);
-    } else if (url.pathname === "/api/login/password") {
-      response = await handlePasswordSetup(request, env);
-    } else if (url.pathname.startsWith(PUBLIC_ASSET_PREFIX + "/assets/")) {
-      const assetUrl = new URL(request.url);
-      assetUrl.pathname = url.pathname.slice(PUBLIC_ASSET_PREFIX.length);
-      response = await env.ASSETS.fetch(new Request(assetUrl, request));
-    } else if (/^\/(?:assets|_next\/static)\//.test(url.pathname)) {
-      response = await env.ASSETS.fetch(request);
-    } else if (url.pathname === "/_vinext/image") {
-      const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      response = await handleImageOptimization(request, {
-        fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
-        transformImage: async (body, { width, format, quality }) => {
-          const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
-          return result.response();
-        },
-      }, allowedWidths);
-    } else {
-      response = await handler.fetch(request, env, ctx);
-    }
-    return withProductionHeaders(request, response);
+      if (url.pathname === "/api/login") {
+        response = await handleOneLogin(request, env);
+      } else if (url.pathname === "/api/mobile-login") {
+        response = await handleMobileLogin(request, env, requestId);
+      } else if (url.pathname === "/api/login/mfa") {
+        response = await handleMfa(request, env);
+      } else if (url.pathname === "/api/login/password") {
+        response = await handlePasswordSetup(request, env);
+      } else if (url.pathname.startsWith(PUBLIC_ASSET_PREFIX + "/assets/")) {
+        const assetUrl = new URL(request.url);
+        assetUrl.pathname = url.pathname.slice(PUBLIC_ASSET_PREFIX.length);
+        response = await env.ASSETS.fetch(new Request(assetUrl, request));
+      } else if (/^\/(?:assets|_next\/static)\//.test(url.pathname)) {
+        response = await env.ASSETS.fetch(request);
+      } else if (url.pathname === "/_vinext/image") {
+        const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
+        response = await handleImageOptimization(request, {
+          fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
+          transformImage: async (body, { width, format, quality }) => {
+            const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
+            return result.response();
+          },
+        }, allowedWidths);
+      } else {
+        response = await handler.fetch(request, env, ctx);
+      }
+      return withProductionHeaders(request, response);
     } catch (error) {
-      await recordRuntimeError(env,{requestId,productCode:'WEBSITE',route:url.pathname,method:request.method,statusCode:500,error});
-      return withProductionHeaders(request,Response.json({error:'CoreCare could not complete this request.',requestId},{status:500,headers:{'cache-control':'no-store','x-request-id':requestId}}));
+      await recordRuntimeError(env, { requestId, productCode: "WEBSITE", route: url.pathname, method: request.method, statusCode: 500, error });
+      return withProductionHeaders(request, Response.json({ error: "CoreCare could not complete this request.", requestId }, {
+        status: 500,
+        headers: { "cache-control": "no-store", "x-request-id": requestId },
+      }));
     }
   },
 };
@@ -93,11 +96,10 @@ const MOBILE_REDIRECT_URI = "uk.co.corecaresystems.app://auth/callback";
 const MOBILE_CODE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
 const MOBILE_STATE_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
 
-function mobileJson(payload: Record<string, unknown>, status = 200): Response {
-  return Response.json(payload, {
-    status,
-    headers: { "cache-control": "no-store" },
-  });
+function mobileJson(payload: Record<string, unknown>, status = 200, requestId = ""): Response {
+  const headers = new Headers({ "cache-control": "no-store" });
+  if (requestId) headers.set("x-request-id", requestId);
+  return Response.json({ ...payload, ...(requestId ? { requestId } : {}) }, { status, headers });
 }
 
 function validatedMobileCallback(value: unknown, expectedState: string): string | null {
@@ -119,29 +121,38 @@ function validatedMobileCallback(value: unknown, expectedState: string): string 
   }
 }
 
-async function handleMobileLogin(request: Request, env: Env): Promise<Response> {
-  if (request.method !== "POST") return mobileJson({ error: "Use POST to sign in." }, 405);
+async function handleMobileLogin(request: Request, env: Env, requestId: string): Promise<Response> {
+  if (request.method !== "POST") return mobileJson({ error: "Use POST to sign in." }, 405, requestId);
   if (!validSameOriginRequest(request)) {
-    return mobileJson({ error: "This mobile sign-in request could not be verified." }, 403);
+    return mobileJson({ error: "This mobile sign-in request could not be verified." }, 403, requestId);
   }
   const contentLength = Number(request.headers.get("content-length") || 0);
-  if (contentLength > 16_384) return mobileJson({ error: "The sign-in request is too large." }, 413);
+  if (contentLength > 16_384) return mobileJson({ error: "The sign-in request is too large." }, 413, requestId);
   if (typeof env.CORECARE_PLATFORM_PORTAL?.authorizeMobile !== "function") {
-    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503);
+    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503, requestId);
   }
 
   let input: Record<string, unknown>;
   try {
     input = await request.json() as Record<string, unknown>;
   } catch {
-    return mobileJson({ error: "The mobile sign-in request was invalid." }, 400);
+    return mobileJson({ error: "The mobile sign-in request was invalid." }, 400, requestId);
   }
-  if (!await verifyTurnstile(request, input.turnstileToken, "login")) return turnstileRejected();
+
+  const turnstile = await verifyTurnstileDetailed(request, input.turnstileToken, "login");
+  if (!turnstile.ok) {
+    await recordEvent("mobile_login_turnstile", {
+      path: "/mobile-login",
+      outcome: turnstile.reason,
+    });
+    return turnstileRejected(turnstile, requestId);
+  }
+
   const rate = await allowFormRequest(request, "mobile-login-portal", 10, 15);
   if (!rate.allowed) {
     return mobileJson({
       error: "Too many sign-in attempts were made from this connection. Please wait and try again.",
-    }, 429);
+    }, 429, requestId);
   }
 
   const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
@@ -159,7 +170,7 @@ async function handleMobileLogin(request: Request, env: Env): Promise<Response> 
     password.length > 0 &&
     password.length <= 1024;
 
-  if (!validRequest) return mobileJson({ error: "The mobile sign-in request was invalid." }, 400);
+  if (!validRequest) return mobileJson({ error: "The mobile sign-in request was invalid." }, 400, requestId);
 
   let result: Record<string, unknown>;
   try {
@@ -176,7 +187,7 @@ async function handleMobileLogin(request: Request, env: Env): Promise<Response> 
     });
   } catch {
     await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "unavailable" });
-    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503);
+    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503, requestId);
   }
 
   if (result.ok !== true) {
@@ -191,17 +202,17 @@ async function handleMobileLogin(request: Request, env: Env): Promise<Response> 
       SIGN_IN_FAILED: "CoreCare could not complete this mobile sign-in.",
     };
     await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: code });
-    return mobileJson({ ok: false, code, error: messages[code] }, code === "INVALID_CREDENTIALS" ? 401 : 403);
+    return mobileJson({ ok: false, code, error: messages[code] }, code === "INVALID_CREDENTIALS" ? 401 : 403, requestId);
   }
 
   const redirectUrl = validatedMobileCallback(result.redirectUrl, state);
   if (!redirectUrl) {
     await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "invalid_callback" });
-    return mobileJson({ error: "CoreCare returned an invalid mobile handoff." }, 502);
+    return mobileJson({ error: "CoreCare returned an invalid mobile handoff." }, 502, requestId);
   }
 
   await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "authorised" });
-  return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt });
+  return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt }, 200, requestId);
 }
 
 async function handleOneLogin(request: Request, env: Env): Promise<Response> {
