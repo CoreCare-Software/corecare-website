@@ -5,6 +5,13 @@ import { MobileLoginClient } from "./mobile-login-client";
 import { parseMobileAuthorizationSearch } from "./mobile-authorization";
 
 const CANONICAL_LOGIN_HOST = "login.corecaresystems.co.uk";
+const STAGING_LOGIN_HOST = "corecare-website-staging.cselectricalservices11.workers.dev";
+const ALLOWED_LOGIN_HOSTS = new Set([
+  CANONICAL_LOGIN_HOST,
+  STAGING_LOGIN_HOST,
+  "localhost",
+  "127.0.0.1",
+]);
 
 export const metadata: Metadata = {
   title: "Sign in to CoreCare Mobile | CoreCare",
@@ -33,7 +40,7 @@ export default async function MobileLoginPage({
     .toLowerCase()
     .replace(/:\d+$/, "");
 
-  if (host && host !== CANONICAL_LOGIN_HOST && host !== "localhost" && host !== "127.0.0.1") {
+  if (host && !ALLOWED_LOGIN_HOSTS.has(host)) {
     const query = new URLSearchParams();
     for (const key of ["client_id", "redirect_uri", "code_challenge", "code_challenge_method", "state"] as const) {
       const value = params[key];

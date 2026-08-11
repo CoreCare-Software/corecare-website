@@ -18,6 +18,8 @@ test("mobile login uses fixed client, callback, PKCE and state boundaries", asyn
   assert.match(authorization, /S256/);
   assert.match(authorization, /searchParams\.get\("state"\) === expectedState/);
   assert.match(page, /CANONICAL_LOGIN_HOST = "login\.corecaresystems\.co\.uk"/);
+  assert.match(page, /STAGING_LOGIN_HOST = "corecare-website-staging\.cselectricalservices11\.workers\.dev"/);
+  assert.match(page, /ALLOWED_LOGIN_HOSTS\.has\(host\)/);
   assert.match(client, /fetch\("\/api\/mobile-login"/);
   assert.match(client, /isExpectedMobileCallback/);
   assert.doesNotMatch(client, /searchParams\.set\("(?:email|password)"/);
@@ -29,4 +31,12 @@ test("mobile login uses fixed client, callback, PKCE and state boundaries", asyn
   assert.match(worker, /validatedMobileCallback/);
   assert.doesNotMatch(worker, /console\.(?:log|info|warn|error)\([^\n]*(?:password|codeChallenge|redirectUrl)/i);
   assert.match(fallback, /requires the Cloudflare Worker runtime/);
+});
+
+test("staging mobile login keeps authorization and Turnstile on the staging Website worker", async () => {
+  const config = await read("wrangler.cloudflare.jsonc");
+  assert.match(
+    config,
+    /TURNSTILE_HOSTNAMES[^\n]+corecare-website-staging\.cselectricalservices11\.workers\.dev/,
+  );
 });
