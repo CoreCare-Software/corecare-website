@@ -79,7 +79,6 @@ export async function verifyTurnstileDetailed(
   if (originalToken.length > 2_048) return { ok: false, reason: "invalid_response" };
   if (!secret || expectedHostnames.size === 0) return { ok: false, reason: "configuration" };
 
-  const clientIp = clean(request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0], 64);
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
       method: "POST",
@@ -88,7 +87,6 @@ export async function verifyTurnstileDetailed(
       body: new URLSearchParams({
         secret,
         response: responseToken,
-        ...(clientIp ? { remoteip: clientIp } : {}),
         idempotency_key: crypto.randomUUID(),
       }),
     });
