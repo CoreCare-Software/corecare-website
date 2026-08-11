@@ -54,7 +54,11 @@ const worker = {
     }
     let response: Response;
 
-    if (url.pathname === "/api/login") {
+    if (url.pathname === "/api/mobile-token") {
+      response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/token");
+    } else if (url.pathname === "/api/mobile-select") {
+      response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/select");
+    } else if (url.pathname === "/api/login") {
       response = await handleOneLogin(request, env);
     } else if (url.pathname === "/api/mobile-login") {
       response = await handleMobileLogin(request, env);
@@ -171,6 +175,7 @@ async function handleMobileLogin(request: Request, env: Env): Promise<Response> 
       state,
       email,
       password,
+      requestedProduct: "CARE",
       ip: request.headers.get("cf-connecting-ip") || "website",
       userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
     });
@@ -202,6 +207,72 @@ async function handleMobileLogin(request: Request, env: Env): Promise<Response> 
 
   await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "authorised" });
   return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt });
+}
+
+function mobileTransportHeaders(origin: string): Record<string, string> {
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "authorization, content-type, x-corecare-mobile-client",
+    "access-control-expose-headers": "content-type",
+    "access-control-max-age": "600",
+    "cache-control": "no-store",
+    "cross-origin-resource-policy": "cross-origin",
+    "referrer-policy": "no-referrer",
+    "vary": "Origin",
+    "x-content-type-options": "nosniff",
+  };
+}
+
+function mobileTransportOrigin(request: Request): string | null {
+  const origin = request.headers.get("origin") || "";
+  if (origin === "capacitor://localhost") return origin;
+  if (!origin && request.headers.get("x-corecare-mobile-client") === MOBILE_CLIENT_ID) {
+    return "capacitor://localhost";
+  }
+  return null;
+}
+
+async function handleMobileBrokerRequest(
+  request: Request,
+  env: Env,
+  platformPath: "/api/mobile/auth/token" | "/api/mobile/auth/select",
+): Promise<Response> {
+  const origin = mobileTransportOrigin(request);
+  if (!origin) return mobileJson({ error: "This Mobile authorization request could not be verified." }, 403);
+  const headers = mobileTransportHeaders(origin);
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (request.method !== "POST") return Response.json({ error: "Use POST." }, { status: 405, headers });
+  if (request.headers.get("x-corecare-mobile-client") !== MOBILE_CLIENT_ID) {
+    return Response.json({ error: "The Mobile client is not registered." }, { status: 401, headers });
+  }
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 16_384) return Response.json({ error: "The Mobile authorization request is too large." }, { status: 413, headers });
+  const raw = await request.text();
+  if (raw.length > 16_384) return Response.json({ error: "The Mobile authorization request is too large." }, { status: 413, headers });
+  let input: Record<string, unknown>;
+  try { input = JSON.parse(raw || "{}") as Record<string, unknown>; }
+  catch { return Response.json({ error: "The Mobile authorization request is invalid." }, { status: 400, headers }); }
+  if (input.clientId !== MOBILE_CLIENT_ID || input.redirectUri !== MOBILE_REDIRECT_URI) {
+    return Response.json({ error: "The Mobile client or callback is invalid." }, { status: 400, headers });
+  }
+
+  const upstreamHeaders = new Headers({
+    "content-type": "application/json",
+    accept: "application/json",
+    origin,
+    "x-corecare-mobile-client": MOBILE_CLIENT_ID,
+  });
+  const authorization = request.headers.get("authorization");
+  if (authorization) upstreamHeaders.set("authorization", authorization);
+  const upstream = await env.CORECARE_PLATFORM_PORTAL.fetch(new Request(`https://corecare-platform.internal${platformPath}`, {
+    method: "POST",
+    headers: upstreamHeaders,
+    body: JSON.stringify(input),
+  }));
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("content-type", upstream.headers.get("content-type") || "application/json; charset=utf-8");
+  return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
 }
 
 async function handleOneLogin(request: Request, env: Env): Promise<Response> {
