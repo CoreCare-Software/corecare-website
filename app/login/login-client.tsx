@@ -15,6 +15,13 @@ type ProductChoice = {
   returnTo?: string;
 };
 
+type UnavailableProduct = {
+  code: string;
+  name: string;
+  description?: string;
+  reason?: string;
+};
+
 type MfaStep = {
   challengeToken?: string;
   enrollmentRequired?: boolean;
@@ -38,6 +45,7 @@ type AuthResult = {
   handoff?: ProductChoice;
   products?: ProductChoice[];
   choices?: ProductChoice[];
+  unavailableProducts?: UnavailableProduct[];
   recoveryCodes?: string[];
 };
 
@@ -56,6 +64,7 @@ export default function LoginClient({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialError);
   const [choices, setChoices] = useState<ProductChoice[]>([]);
+  const [unavailableProducts, setUnavailableProducts] = useState<UnavailableProduct[]>([]);
   const [mfa, setMfa] = useState<MfaStep | null>(null);
   const [setup, setSetup] = useState<SetupStep | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
@@ -85,6 +94,8 @@ export default function LoginClient({
   }
 
   function continueWith(result: AuthResult, newRecoveryCodes: string[] = []) {
+    const unavailable = result.unavailableProducts || [];
+    setUnavailableProducts(unavailable);
     if (result.stage === "mfa" && result.mfa) {
       setMfa(result.mfa);
       setStage("mfa");
@@ -104,7 +115,12 @@ export default function LoginClient({
       return;
     }
     if (result.handoff) {
-      handoff(result.handoff);
+      if (unavailable.length) {
+        setChoices([result.handoff]);
+        setStage("products");
+      } else {
+        handoff(result.handoff);
+      }
       return;
     }
     if (nextChoices.length) {
@@ -137,6 +153,7 @@ export default function LoginClient({
     setBusy(true);
     setMessage("");
     setChoices([]);
+    setUnavailableProducts([]);
     const form = new FormData(event.currentTarget);
     try {
       continueWith(await request("/api/login", {
@@ -343,7 +360,11 @@ export default function LoginClient({
 
           {stage === "products" ? (
             <>
-              <p>Your account has access to these products for this organisation.</p>
+              <p>
+                {unavailableProducts.length
+                  ? "Choose an available product. Other assigned products are shown separately until their secure handoff is ready."
+                  : "Your account has access to these products for this organisation."}
+              </p>
               <div className="product-access-grid">
                 {choices.map((choice) => (
                   <button key={choice.code} type="button" onClick={() => handoff(choice)}>
@@ -353,6 +374,19 @@ export default function LoginClient({
                   </button>
                 ))}
               </div>
+              {unavailableProducts.length ? (
+                <div className="auth-setup-card" role="status" aria-live="polite">
+                  <strong>Assigned products awaiting secure One Login</strong>
+                  <ul>
+                    {unavailableProducts.map((item) => (
+                      <li key={item.code}>
+                        <strong>{item.name}</strong>
+                        <span>{item.description || "Access remains assigned; the secure handoff is not available yet."}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </>
           ) : null}
 
