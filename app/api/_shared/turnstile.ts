@@ -101,7 +101,8 @@ export async function verifyTurnstileDetailed(
     if (!response.ok) return { ok: false, reason: "provider_unavailable" };
 
     const result = await readBoundedJson(response);
-    if (result.success !== true) return { ok: false, reason: providerFailureReason(result) };
+    const providerAccepted = result.success === true;
+    if (!providerAccepted) return { ok: false, reason: providerFailureReason(result) };
 
     const action = clean(result.action, 80);
     const hostname = clean(result.hostname, 253).toLowerCase();
