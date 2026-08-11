@@ -11,6 +11,7 @@ const PUBLIC_ASSET_PREFIX = "/_corecare-static";
 interface PortalBinding extends Fetcher {
   verifyMfa(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   completePasswordSetup(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  authorizeMobile(input: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
 interface Env {
@@ -55,6 +56,8 @@ const worker = {
 
     if (url.pathname === "/api/login") {
       response = await handleOneLogin(request, env);
+    } else if (url.pathname === "/api/mobile-login") {
+      response = await handleMobileLogin(request, env);
     } else if (url.pathname === "/api/login/mfa") {
       response = await handleMfa(request, env);
     } else if (url.pathname === "/api/login/password") {
@@ -84,6 +87,122 @@ const worker = {
     }
   },
 };
+
+const MOBILE_CLIENT_ID = "uk.co.corecaresystems.app";
+const MOBILE_REDIRECT_URI = "uk.co.corecaresystems.app://auth/callback";
+const MOBILE_CODE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
+const MOBILE_STATE_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
+
+function mobileJson(payload: Record<string, unknown>, status = 200): Response {
+  return Response.json(payload, {
+    status,
+    headers: { "cache-control": "no-store" },
+  });
+}
+
+function validatedMobileCallback(value: unknown, expectedState: string): string | null {
+  if (typeof value !== "string" || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "uk.co.corecaresystems.app:" ||
+      url.hostname !== "auth" ||
+      url.pathname !== "/callback" ||
+      url.searchParams.get("state") !== expectedState ||
+      !url.searchParams.get("code")
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function handleMobileLogin(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return mobileJson({ error: "Use POST to sign in." }, 405);
+  if (!validSameOriginRequest(request)) {
+    return mobileJson({ error: "This mobile sign-in request could not be verified." }, 403);
+  }
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 16_384) return mobileJson({ error: "The sign-in request is too large." }, 413);
+  if (typeof env.CORECARE_PLATFORM_PORTAL?.authorizeMobile !== "function") {
+    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503);
+  }
+
+  let input: Record<string, unknown>;
+  try {
+    input = await request.json() as Record<string, unknown>;
+  } catch {
+    return mobileJson({ error: "The mobile sign-in request was invalid." }, 400);
+  }
+  if (!await verifyTurnstile(request, input.turnstileToken, "login")) return turnstileRejected();
+  const rate = await allowFormRequest(request, "mobile-login-portal", 10, 15);
+  if (!rate.allowed) {
+    return mobileJson({
+      error: "Too many sign-in attempts were made from this connection. Please wait and try again.",
+    }, 429);
+  }
+
+  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  const password = typeof input.password === "string" ? input.password : "";
+  const codeChallenge = typeof input.codeChallenge === "string" ? input.codeChallenge : "";
+  const state = typeof input.state === "string" ? input.state : "";
+  const validRequest =
+    input.clientId === MOBILE_CLIENT_ID &&
+    input.redirectUri === MOBILE_REDIRECT_URI &&
+    input.codeChallengeMethod === "S256" &&
+    MOBILE_CODE_CHALLENGE_PATTERN.test(codeChallenge) &&
+    MOBILE_STATE_PATTERN.test(state) &&
+    email.length > 3 &&
+    email.length <= 254 &&
+    password.length > 0 &&
+    password.length <= 1024;
+
+  if (!validRequest) return mobileJson({ error: "The mobile sign-in request was invalid." }, 400);
+
+  let result: Record<string, unknown>;
+  try {
+    result = await env.CORECARE_PLATFORM_PORTAL.authorizeMobile({
+      clientId: MOBILE_CLIENT_ID,
+      redirectUri: MOBILE_REDIRECT_URI,
+      codeChallenge,
+      codeChallengeMethod: "S256",
+      state,
+      email,
+      password,
+      ip: request.headers.get("cf-connecting-ip") || "website",
+      userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
+    });
+  } catch {
+    await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "unavailable" });
+    return mobileJson({ error: "CoreCare Mobile sign-in is temporarily unavailable." }, 503);
+  }
+
+  if (result.ok !== true) {
+    const reportedCode = typeof result.code === "string" ? result.code : "";
+    const allowedCodes = new Set(["INVALID_CREDENTIALS", "MFA_REQUIRED", "PASSWORD_CHANGE_REQUIRED", "NO_PRODUCT_ACCESS"]);
+    const code = allowedCodes.has(reportedCode) ? reportedCode : "SIGN_IN_FAILED";
+    const messages: Record<string, string> = {
+      INVALID_CREDENTIALS: "The email address or password was not recognised.",
+      MFA_REQUIRED: "This account requires additional verification that CoreCare Mobile does not support yet. No sign-in was completed.",
+      PASSWORD_CHANGE_REQUIRED: "Finish setting up your CoreCare password before signing in to CoreCare Mobile.",
+      NO_PRODUCT_ACCESS: "This account does not currently have an available CoreCare product.",
+      SIGN_IN_FAILED: "CoreCare could not complete this mobile sign-in.",
+    };
+    await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: code });
+    return mobileJson({ ok: false, code, error: messages[code] }, code === "INVALID_CREDENTIALS" ? 401 : 403);
+  }
+
+  const redirectUrl = validatedMobileCallback(result.redirectUrl, state);
+  if (!redirectUrl) {
+    await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "invalid_callback" });
+    return mobileJson({ error: "CoreCare returned an invalid mobile handoff." }, 502);
+  }
+
+  await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "authorised" });
+  return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt });
+}
 
 async function handleOneLogin(request: Request, env: Env): Promise<Response> {
   if (request.method !== "POST") return Response.json({ error: "Use POST to sign in." }, { status: 405, headers: { Allow: "POST" } });
