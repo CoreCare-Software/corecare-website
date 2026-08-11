@@ -61,9 +61,9 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>
     useImperativeHandle(ref, () => ({
       reset() {
         if (widgetId.current !== null && window.turnstile) window.turnstile.reset(widgetId.current);
-        clear();
+        onToken("");
       },
-    }), [onToken, onStatus]);
+    }), [onToken]);
 
     return <div className="turnstile-wrap">
       <Script
