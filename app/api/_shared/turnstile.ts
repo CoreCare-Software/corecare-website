@@ -106,7 +106,8 @@ export async function verifyTurnstileDetailed(
 
     const action = clean(result.action, 80);
     const hostname = clean(result.hostname, 253).toLowerCase();
-    if (action !== expectedAction) return { ok: false, reason: "action_mismatch" };
+    const expectedActionMatched = result.action === expectedAction;
+    if (!expectedActionMatched) return { ok: false, reason: "action_mismatch" };
     if (!expectedHostnames.has(hostname) || hostname !== requestHostname) {
       return { ok: false, reason: "hostname_mismatch" };
     }
