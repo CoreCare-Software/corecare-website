@@ -20,7 +20,7 @@ test("mobile login uses fixed client, callback, PKCE and state boundaries", asyn
   assert.match(page, /CANONICAL_LOGIN_HOST = "login\.corecaresystems\.co\.uk"/);
   assert.match(page, /STAGING_LOGIN_HOST = "corecare-website-staging\.cselectricalservices11\.workers\.dev"/);
   assert.match(page, /ALLOWED_LOGIN_HOSTS\.has\(host\)/);
-  assert.match(client, /fetch\("\/api\/mobile-login"/);
+  assert.match(client, /post\("\/api\/mobile-login"/);
   assert.match(client, /isExpectedMobileCallback/);
   assert.doesNotMatch(client, /searchParams\.set\("(?:email|password)"/);
   assert.match(worker, /authorizeMobile\(input: Record<string, unknown>\)/);
@@ -44,7 +44,7 @@ test("mobile login retains exactly the active Turnstile response and blocks earl
   assert.match(client, /turnstileToken: activeTurnstileToken/);
   assert.match(client, /disabled=!authorization \|\| busy \|\| !turnstileReady|disabled=\{!authorization \|\| busy \|\| !turnstileReady\}/);
   assert.match(client, /turnstileToken\.current = ""/);
-  assert.match(client, /response\.headers\.get\("x-request-id"\)/);
+  assert.match(client, /const requestId = result\.requestId \|\| ""/);
 
   assert.match(widget, /"expired-callback": \(\) => clear\("expired"\)/);
   assert.match(widget, /"timeout-callback": \(\) => clear\("timeout"\)/);
@@ -70,6 +70,7 @@ test("server-side Turnstile verification is fail-closed, correlated and proxy-sa
   assert.match(worker, /outcome: turnstile\.reason/);
   assert.match(worker, /turnstileRejected\(turnstile, requestId\)/);
   assert.match(worker, /x-request-id/);
+  assert.match(worker, /\.\.\.\(requestId \? \{ requestId \} : \{\}\)/);
 });
 
 test("staging mobile login keeps authorization and Turnstile on the staging Website worker", async () => {

@@ -35,6 +35,8 @@ interface PortalBinding extends Fetcher {
   verifyMfa(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   completePasswordSetup(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   authorizeMobile(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  verifyMobileMfa(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  completeMobilePasswordSetup(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   redeemProductChooser(input: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
@@ -82,10 +84,20 @@ const worker = {
         response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/token");
       } else if (url.pathname === "/api/mobile-select") {
         response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/select");
+      } else if (url.pathname === "/api/mobile-products") {
+        response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/products");
+      } else if (url.pathname === "/api/mobile-leave") {
+        response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/leave");
+      } else if (url.pathname === "/api/mobile-logout") {
+        response = await handleMobileBrokerRequest(request, env, "/api/mobile/auth/logout");
       } else if (url.pathname === "/api/login") {
         response = await handleOneLogin(request, env);
       } else if (url.pathname === "/api/mobile-login") {
         response = await handleMobileLogin(request, env, requestId);
+      } else if (url.pathname === "/api/mobile-login/mfa") {
+        response = await handleMobileMfa(request, env, requestId);
+      } else if (url.pathname === "/api/mobile-login/password") {
+        response = await handleMobilePasswordSetup(request, env, requestId);
       } else if (url.pathname === "/api/login/mfa") {
         response = await handleMfa(request, env);
       } else if (url.pathname === "/api/login/password") {
@@ -125,6 +137,7 @@ const MOBILE_CLIENT_ID = "uk.co.corecaresystems.app";
 const MOBILE_REDIRECT_URI = "uk.co.corecaresystems.app://auth/callback";
 const MOBILE_CODE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
 const MOBILE_STATE_PATTERN = /^[A-Za-z0-9_-]{16,256}$/;
+const MOBILE_TRANSPORT_ORIGINS = new Set(["capacitor://localhost", "https://localhost"]);
 
 function mobileJson(payload: Record<string, unknown>, status = 200, requestId = ""): Response {
   const headers = new Headers({ "cache-control": "no-store" });
@@ -149,6 +162,15 @@ function validatedMobileCallback(value: unknown, expectedState: string): string 
   } catch {
     return null;
   }
+}
+
+function validatedMobilePasswordSetup(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  const setup = value as Record<string, unknown>;
+  const grant = typeof setup.grant === "string" ? setup.grant : "";
+  const expiresAt = typeof setup.expiresAt === "string" ? setup.expiresAt : "";
+  if (setup.required !== true || !/^[A-Za-z0-9_-]{43}$/.test(grant) || Date.parse(expiresAt) <= Date.now()) return null;
+  return { required: true, grant, expiresAt };
 }
 
 async function handleMobileLogin(request: Request, env: Env, requestId: string): Promise<Response> {
@@ -212,7 +234,6 @@ async function handleMobileLogin(request: Request, env: Env, requestId: string):
       state,
       email,
       password,
-      requestedProduct: "CARE",
       ip: request.headers.get("cf-connecting-ip") || "website",
       userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
     });
@@ -223,11 +244,22 @@ async function handleMobileLogin(request: Request, env: Env, requestId: string):
 
   if (result.ok !== true) {
     const reportedCode = typeof result.code === "string" ? result.code : "";
+    if (reportedCode === "MFA_REQUIRED" && result.mfa && typeof result.mfa === "object") {
+      await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "mfa_required" });
+      return mobileJson({ ok: true, stage: "mfa", mfa: result.mfa }, 202, requestId);
+    }
+    const setup = reportedCode === "PASSWORD_CHANGE_REQUIRED"
+      ? validatedMobilePasswordSetup(result.setup)
+      : null;
+    if (setup) {
+      await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "password_change_required" });
+      return mobileJson({ ok: true, stage: "password", setup, recoveryCodes: result.recoveryCodes || [] }, 202, requestId);
+    }
     const allowedCodes = new Set(["INVALID_CREDENTIALS", "MFA_REQUIRED", "PASSWORD_CHANGE_REQUIRED", "NO_PRODUCT_ACCESS"]);
     const code = allowedCodes.has(reportedCode) ? reportedCode : "SIGN_IN_FAILED";
     const messages: Record<string, string> = {
       INVALID_CREDENTIALS: "The email address or password was not recognised.",
-      MFA_REQUIRED: "This account requires additional verification that CoreCare Mobile does not support yet. No sign-in was completed.",
+      MFA_REQUIRED: "Complete the Platform security check before continuing.",
       PASSWORD_CHANGE_REQUIRED: "Finish setting up your CoreCare password before signing in to CoreCare Mobile.",
       NO_PRODUCT_ACCESS: "This account does not currently have an available CoreCare product.",
       SIGN_IN_FAILED: "CoreCare could not complete this mobile sign-in.",
@@ -243,6 +275,147 @@ async function handleMobileLogin(request: Request, env: Env, requestId: string):
   }
 
   await recordEvent("mobile_login_authorisation", { path: "/mobile-login", outcome: "authorised" });
+  return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt, recoveryCodes: result.recoveryCodes || [] }, 200, requestId);
+}
+
+async function handleMobileMfa(request: Request, env: Env, requestId: string): Promise<Response> {
+  if (request.method !== "POST") return mobileJson({ error: "Use POST to verify Platform MFA." }, 405, requestId);
+  if (!validSameOriginRequest(request)) {
+    return mobileJson({ error: "This Mobile security request could not be verified." }, 403, requestId);
+  }
+  if (Number(request.headers.get("content-length") || 0) > 16_384) {
+    return mobileJson({ error: "The Mobile security request is too large." }, 413, requestId);
+  }
+  if (typeof env.CORECARE_PLATFORM_PORTAL?.verifyMobileMfa !== "function") {
+    return mobileJson({ error: "CoreCare Mobile security verification is temporarily unavailable." }, 503, requestId);
+  }
+  const rate = await allowFormRequest(request, "mobile-mfa-portal", 10, 15);
+  if (!rate.allowed) {
+    return mobileJson({ error: "Too many security checks were attempted. Wait and try again." }, 429, requestId);
+  }
+  let input: Record<string, unknown>;
+  try { input = await request.json() as Record<string, unknown>; }
+  catch { return mobileJson({ error: "The Mobile security request was invalid." }, 400, requestId); }
+  const challengeToken = typeof input.challengeToken === "string" ? input.challengeToken : "";
+  const code = typeof input.code === "string" ? input.code.trim() : "";
+  const codeChallenge = typeof input.codeChallenge === "string" ? input.codeChallenge : "";
+  const state = typeof input.state === "string" ? input.state : "";
+  const validRequest = input.clientId === MOBILE_CLIENT_ID
+    && input.redirectUri === MOBILE_REDIRECT_URI
+    && input.codeChallengeMethod === "S256"
+    && MOBILE_CODE_CHALLENGE_PATTERN.test(codeChallenge)
+    && MOBILE_STATE_PATTERN.test(state)
+    && /^[A-Za-z0-9_-]{20,512}$/.test(challengeToken)
+    && code.length >= 6
+    && code.length <= 128;
+  if (!validRequest) return mobileJson({ error: "The Mobile security request was invalid." }, 400, requestId);
+
+  let result: Record<string, unknown>;
+  try {
+    result = await env.CORECARE_PLATFORM_PORTAL.verifyMobileMfa({
+      clientId: MOBILE_CLIENT_ID,
+      redirectUri: MOBILE_REDIRECT_URI,
+      codeChallenge,
+      codeChallengeMethod: "S256",
+      state,
+      challengeToken,
+      code,
+      ip: request.headers.get("cf-connecting-ip") || "website",
+      userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
+    });
+  } catch {
+    return mobileJson({ error: "CoreCare Mobile security verification is temporarily unavailable." }, 503, requestId);
+  }
+  if (result.ok !== true) {
+    const reportedCode = typeof result.code === "string" ? result.code : "MFA_CODE_INVALID";
+    const setup = reportedCode === "PASSWORD_CHANGE_REQUIRED"
+      ? validatedMobilePasswordSetup(result.setup)
+      : null;
+    if (setup) {
+      await recordEvent("mobile_login_mfa", { path: "/mobile-login", outcome: "password_change_required" });
+      return mobileJson({ ok: true, stage: "password", setup, recoveryCodes: result.recoveryCodes || [] }, 202, requestId);
+    }
+    const allowedCodes = new Set(["MFA_CODE_INVALID", "MFA_CHALLENGE_INVALID", "PASSWORD_CHANGE_REQUIRED", "NO_PRODUCT_ACCESS"]);
+    const responseCode = allowedCodes.has(reportedCode) ? reportedCode : "MFA_CODE_INVALID";
+    const message = typeof result.message === "string" ? result.message : responseCode === "PASSWORD_CHANGE_REQUIRED"
+      ? "Finish the Platform password setup before returning to CoreCare Mobile."
+      : "The Platform security code was not accepted.";
+    await recordEvent("mobile_login_mfa", { path: "/mobile-login", outcome: responseCode });
+    return mobileJson({ ok: false, code: responseCode, error: message }, Number(result.status) || 403, requestId);
+  }
+  const redirectUrl = validatedMobileCallback(result.redirectUrl, state);
+  if (!redirectUrl) return mobileJson({ error: "CoreCare returned an invalid Mobile handoff." }, 502, requestId);
+  await recordEvent("mobile_login_mfa", { path: "/mobile-login", outcome: "authorised" });
+  return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt, recoveryCodes: result.recoveryCodes || [] }, 200, requestId);
+}
+
+async function handleMobilePasswordSetup(request: Request, env: Env, requestId: string): Promise<Response> {
+  if (request.method !== "POST") return mobileJson({ error: "Use POST to complete Platform password setup." }, 405, requestId);
+  if (!validSameOriginRequest(request)) {
+    return mobileJson({ error: "This Mobile account setup request could not be verified." }, 403, requestId);
+  }
+  if (Number(request.headers.get("content-length") || 0) > 16_384) {
+    return mobileJson({ error: "The Mobile account setup request is too large." }, 413, requestId);
+  }
+  if (typeof env.CORECARE_PLATFORM_PORTAL?.completeMobilePasswordSetup !== "function") {
+    return mobileJson({ error: "CoreCare Mobile account setup is temporarily unavailable." }, 503, requestId);
+  }
+  const rate = await allowFormRequest(request, "mobile-password-setup", 8, 15);
+  if (!rate.allowed) {
+    return mobileJson({ error: "Too many account setup attempts were made. Wait and sign in again." }, 429, requestId);
+  }
+  let input: Record<string, unknown>;
+  try { input = await request.json() as Record<string, unknown>; }
+  catch { return mobileJson({ error: "The Mobile account setup request was invalid." }, 400, requestId); }
+  const grant = typeof input.grant === "string" ? input.grant : "";
+  const newPassword = typeof input.newPassword === "string" ? input.newPassword : "";
+  const codeChallenge = typeof input.codeChallenge === "string" ? input.codeChallenge : "";
+  const state = typeof input.state === "string" ? input.state : "";
+  const validRequest = input.clientId === MOBILE_CLIENT_ID
+    && input.redirectUri === MOBILE_REDIRECT_URI
+    && input.codeChallengeMethod === "S256"
+    && MOBILE_CODE_CHALLENGE_PATTERN.test(codeChallenge)
+    && MOBILE_STATE_PATTERN.test(state)
+    && /^[A-Za-z0-9_-]{43}$/.test(grant)
+    && newPassword.length >= 12
+    && newPassword.length <= 128;
+  if (!validRequest) return mobileJson({ error: "The Mobile account setup request was invalid." }, 400, requestId);
+
+  let result: Record<string, unknown>;
+  try {
+    result = await env.CORECARE_PLATFORM_PORTAL.completeMobilePasswordSetup({
+      clientId: MOBILE_CLIENT_ID,
+      redirectUri: MOBILE_REDIRECT_URI,
+      codeChallenge,
+      codeChallengeMethod: "S256",
+      state,
+      grant,
+      newPassword,
+      ip: request.headers.get("cf-connecting-ip") || "website",
+      userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
+    });
+  } catch {
+    return mobileJson({ error: "CoreCare Mobile account setup is temporarily unavailable." }, 503, requestId);
+  }
+  if (result.ok !== true) {
+    const code = typeof result.code === "string" ? result.code : "MOBILE_AUTH_UNAVAILABLE";
+    const allowed = new Set(["WEAK_PASSWORD", "SETUP_GRANT_INVALID", "PASSWORD_SETUP_NOT_REQUIRED"]);
+    const responseCode = allowed.has(code) ? code : "MOBILE_AUTH_UNAVAILABLE";
+    const message = typeof result.error === "object" && result.error
+      ? String((result.error as Record<string, unknown>).message || "")
+      : typeof result.message === "string" ? result.message : "";
+    await recordEvent("mobile_login_password", { path: "/mobile-login", outcome: responseCode });
+    return mobileJson({
+      ok: false,
+      code: responseCode,
+      error: message || (responseCode === "WEAK_PASSWORD"
+        ? "Use at least 12 characters with upper-case, lower-case and a number."
+        : "This account setup could not be completed. Sign in again."),
+    }, Number(result.status) || (responseCode === "MOBILE_AUTH_UNAVAILABLE" ? 503 : 400), requestId);
+  }
+  const redirectUrl = validatedMobileCallback(result.redirectUrl, state);
+  if (!redirectUrl) return mobileJson({ error: "CoreCare returned an invalid Mobile handoff." }, 502, requestId);
+  await recordEvent("mobile_login_password", { path: "/mobile-login", outcome: "authorised" });
   return mobileJson({ ok: true, redirectUrl, expiresAt: result.expiresAt }, 200, requestId);
 }
 
@@ -263,17 +436,14 @@ function mobileTransportHeaders(origin: string): Record<string, string> {
 
 function mobileTransportOrigin(request: Request): string | null {
   const origin = request.headers.get("origin") || "";
-  if (origin === "capacitor://localhost") return origin;
-  if (!origin && request.headers.get("x-corecare-mobile-client") === MOBILE_CLIENT_ID) {
-    return "capacitor://localhost";
-  }
+  if (MOBILE_TRANSPORT_ORIGINS.has(origin)) return origin;
   return null;
 }
 
 async function handleMobileBrokerRequest(
   request: Request,
   env: Env,
-  platformPath: "/api/mobile/auth/token" | "/api/mobile/auth/select",
+  platformPath: "/api/mobile/auth/token" | "/api/mobile/auth/select" | "/api/mobile/auth/products" | "/api/mobile/auth/leave" | "/api/mobile/auth/logout",
 ): Promise<Response> {
   const origin = mobileTransportOrigin(request);
   if (!origin) return mobileJson({ error: "This Mobile authorization request could not be verified." }, 403);
