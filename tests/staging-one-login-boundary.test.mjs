@@ -14,8 +14,10 @@ test('staging login stays on the staging Website and permits Turnstile there', a
 
 test('staging handoff client blocks production and unknown product targets', async () => {
   const source = await readFile(new URL('../app/login/login-client.tsx', import.meta.url), 'utf8');
-  assert.match(source, /STAGING_PRODUCT_HOST/);
-  assert.match(source, /stagingLogin \? !stagingTarget : !productionTarget/);
+  assert.match(source, /STAGING_PRODUCT_HANDOFFS/);
+  assert.match(source, /PRODUCTION_PRODUCT_HANDOFFS/);
+  assert.match(source, /action\.toString\(\) !== expectedTarget/);
+  assert.doesNotMatch(source, /endsWith\("\.corecaresystems\.co\.uk"\)/);
   assert.match(source, /blocked a handoff outside staging/);
 });
 

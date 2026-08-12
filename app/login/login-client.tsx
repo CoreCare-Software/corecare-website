@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { CUSTOMER_PRODUCTS } from "../products";
 import { Brand } from "../site-chrome";
 import { TurnstileWidget, type TurnstileHandle } from "../turnstile-widget";
@@ -60,7 +60,22 @@ type MobileAuthorization = {
 };
 
 const STAGING_LOGIN_HOST = "corecare-website-staging.cselectricalservices11.workers.dev";
-const STAGING_PRODUCT_HOST = /^corecare-(?:care|pos|finance|garage|campsite|marketing)-staging\.cselectricalservices11\.workers\.dev$/;
+const PRODUCTION_PRODUCT_HANDOFFS: Readonly<Record<string, string>> = Object.freeze({
+  CARE: "https://care.corecaresystems.co.uk/auth/portal-login",
+  CAMPSITE: "https://campsites.corecaresystems.co.uk/auth/portal-login",
+  FINANCE: "https://finance.corecaresystems.co.uk/auth/portal-login",
+  GARAGE: "https://garage.corecaresystems.co.uk/auth/portal-claim",
+  MARKETING: "https://marketing.corecaresystems.co.uk/auth/portal-login",
+  POS: "https://pos.corecaresystems.co.uk/auth/portal-login",
+});
+const STAGING_PRODUCT_HANDOFFS: Readonly<Record<string, string>> = Object.freeze({
+  CARE: "https://corecare-care-staging.cselectricalservices11.workers.dev/auth/portal-login",
+  CAMPSITE: "https://corecare-campsite-staging.cselectricalservices11.workers.dev/auth/portal-login",
+  FINANCE: "https://corecare-finance-staging.cselectricalservices11.workers.dev/auth/portal-login",
+  GARAGE: "https://corecare-garage-staging.cselectricalservices11.workers.dev/auth/portal-claim",
+  MARKETING: "https://corecare-marketing-staging.cselectricalservices11.workers.dev/auth/portal-login",
+  POS: "https://corecare-pos-staging.cselectricalservices11.workers.dev/auth/portal-login",
+});
 
 export default function LoginClient({
   initialProduct = "",
@@ -88,7 +103,39 @@ export default function LoginClient({
   const [capsLock, setCapsLock] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstile = useRef<TurnstileHandle>(null);
+  const chooserTicket = useRef<string | null>(null);
   const isMobileAuthorization = Boolean(mobileAuthorization);
+
+  useEffect(() => {
+    if (chooserTicket.current === null) {
+      const fragment = new URLSearchParams(window.location.hash.slice(1));
+      chooserTicket.current = fragment.get("switch") || "";
+      if (chooserTicket.current) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      }
+    }
+    const ticket = chooserTicket.current;
+    if (!ticket) return;
+    const timer = window.setTimeout(() => {
+      if (!/^[A-Za-z0-9_-]{20,256}$/.test(ticket)) {
+        setMessage("This product chooser link is invalid. Return to your current product and select Switch products again.");
+        return;
+      }
+      setStage("switching");
+      setBusy(true);
+      setMessage("");
+      request("/api/login/switch", { ticket })
+        .then((result) => continueWith(result))
+        .catch((error) => {
+          setStage("credentials");
+          setMessage(error instanceof Error ? error.message : "CoreCare could not open the product chooser.");
+        })
+        .finally(() => setBusy(false));
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // The chooser ticket is an initial navigation capability and must be redeemed once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handoff(choice: ProductChoice) {
     let action: URL;
@@ -99,11 +146,8 @@ export default function LoginClient({
       return;
     }
     const stagingLogin = window.location.hostname === STAGING_LOGIN_HOST;
-    const productionTarget = action.protocol === "https:" && (
-      action.hostname === "corecaresystems.co.uk" || action.hostname.endsWith(".corecaresystems.co.uk")
-    );
-    const stagingTarget = action.protocol === "https:" && STAGING_PRODUCT_HOST.test(action.hostname);
-    if (!choice.grant || (stagingLogin ? !stagingTarget : !productionTarget)) {
+    const expectedTarget = (stagingLogin ? STAGING_PRODUCT_HANDOFFS : PRODUCTION_PRODUCT_HANDOFFS)[choice.code];
+    if (!choice.grant || !expectedTarget || action.toString() !== expectedTarget) {
       setMessage(stagingLogin
         ? "CoreCare blocked a handoff outside staging. Your session and production products were not changed."
         : "CoreCare blocked an unrecognised product handoff. No product session was created.");
@@ -267,7 +311,9 @@ export default function LoginClient({
           <h1>
             {stage === "credentials"
               ? "Good to see you again."
-              : stage === "mfa"
+              : stage === "switching"
+                ? "Choose where to work."
+                : stage === "mfa"
                 ? "Secure your account."
                 : stage === "password"
                   ? "Choose your private password."
@@ -328,6 +374,8 @@ export default function LoginClient({
               </form>
             </>
           ) : null}
+
+          {stage === "switching" ? <p>Checking your live CoreCare session and current product access...</p> : null}
 
           {stage === "mfa" ? (
             <>
