@@ -16,6 +16,14 @@ const STAGING_HANDOFF_ORIGINS = Object.freeze([
   "https://corecare-marketing-staging.cselectricalservices11.workers.dev",
   "https://corecare-pos-staging.cselectricalservices11.workers.dev",
 ]);
+const PRODUCTION_HANDOFF_ORIGINS = Object.freeze([
+  "https://care.corecaresystems.co.uk",
+  "https://campsites.corecaresystems.co.uk",
+  "https://finance.corecaresystems.co.uk",
+  "https://garage.corecaresystems.co.uk",
+  "https://marketing.corecaresystems.co.uk",
+  "https://pos.corecaresystems.co.uk",
+]);
 
 function websiteEnvironment(request: Request): "production" | "staging" {
   return new URL(request.url).hostname === STAGING_WEBSITE_HOST
@@ -27,6 +35,7 @@ interface PortalBinding extends Fetcher {
   verifyMfa(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   completePasswordSetup(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   authorizeMobile(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  redeemProductChooser(input: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
 interface Env {
@@ -81,6 +90,8 @@ const worker = {
         response = await handleMfa(request, env);
       } else if (url.pathname === "/api/login/password") {
         response = await handlePasswordSetup(request, env);
+      } else if (url.pathname === "/api/login/switch") {
+        response = await handleProductChooser(request, env);
       } else if (url.pathname.startsWith(PUBLIC_ASSET_PREFIX + "/assets/")) {
         const assetUrl = new URL(request.url);
         assetUrl.pathname = url.pathname.slice(PUBLIC_ASSET_PREFIX.length);
@@ -352,10 +363,50 @@ async function handlePasswordSetup(request: Request, env: Env): Promise<Response
   return portalResult(payload, Number(payload.status || 200), websiteEnvironment(request));
 }
 
+async function handleProductChooser(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return Response.json({ error: "Use POST to open the product chooser." }, { status: 405, headers: { Allow: "POST" } });
+  if (!validSameOriginRequest(request)) return Response.json({ error: "This product switch request could not be verified." }, { status: 403 });
+  if (typeof env.CORECARE_PLATFORM_PORTAL?.redeemProductChooser !== "function") {
+    return Response.json({ error: "CoreCare product switching is temporarily unavailable." }, { status: 503 });
+  }
+  if (Number(request.headers.get("content-length") || 0) > 4_096) {
+    return Response.json({ error: "This product switch request is too large." }, { status: 413 });
+  }
+  const rate = await allowFormRequest(request, "central-product-chooser", 30, 15);
+  if (!rate.allowed) return Response.json({ error: "Too many product switch requests were received. Wait and try again." }, {
+    status: 429,
+    headers: { "retry-after": String(rate.retryAfter), "cache-control": "no-store" },
+  });
+  let input: Record<string, unknown>;
+  try { input = await request.json() as Record<string, unknown>; }
+  catch { return Response.json({ error: "This product chooser link is invalid." }, { status: 400 }); }
+  const ticket = typeof input.ticket === "string" ? input.ticket : "";
+  if (!/^[A-Za-z0-9_-]{20,256}$/.test(ticket)) {
+    return Response.json({ error: "This product chooser link is invalid." }, { status: 400 });
+  }
+  let payload: Record<string, unknown>;
+  try {
+    payload = await env.CORECARE_PLATFORM_PORTAL.redeemProductChooser({
+      ticket,
+      ip: request.headers.get("cf-connecting-ip") || "website",
+      userAgent: request.headers.get("user-agent") || "CoreCare-Website/1.0",
+    });
+  } catch {
+    return Response.json({ error: "CoreCare product switching is temporarily unavailable." }, { status: 503 });
+  }
+  const status = Number(payload.status || (payload.ok === true ? 200 : 403));
+  await recordEvent("central_product_chooser", {
+    path: "/login",
+    outcome: payload.ok === true ? "ready" : String(payload.code || status),
+  });
+  return portalResult(payload, status, websiteEnvironment(request), true);
+}
+
 function portalResult(
   payload: Record<string, unknown>,
   status: number,
   environment: "production" | "staging",
+  forceChooser = false,
 ): Response {
   if (payload.ok !== true) {
     const code = String(payload.code || "INVALID_CREDENTIALS");
@@ -365,6 +416,10 @@ function portalResult(
       NO_PRODUCT_ACCESS: "This account does not currently have an available CoreCare product.",
       PRODUCT_DISABLED: "That CoreCare product is not available yet.",
       PRODUCT_LOGIN_NOT_READY: "Your product access exists, but its One Login handoff is not ready yet.",
+      CHOOSER_TICKET_INVALID: "This product chooser link is invalid. Return to your current product and select Switch products again.",
+      CHOOSER_TICKET_EXPIRED: "This product chooser link has expired. Return to your current product and select Switch products again.",
+      CHOOSER_TICKET_REPLAYED: "This product chooser link has already been used. Return to your current product and select Switch products again.",
+      INVALID_SESSION: "Your central CoreCare session is no longer valid. Sign in again to continue.",
     };
     return Response.json({ error: String(payload.message || messages[code] || "The email address or password is incorrect."), code }, { status: status === 429 ? 429 : status >= 500 ? 503 : status >= 400 ? status : 401 });
   }
@@ -381,7 +436,7 @@ function portalResult(
   if (!choices.length) return Response.json({ error: "This account does not currently have an available CoreCare product.", code: "NO_PRODUCT_ACCESS" }, { status: 403 });
 
   const common = { unavailableProducts: unavailable, recoveryCodes: payload.recoveryCodes || [] };
-  return choices.length === 1
+  return choices.length === 1 && !forceChooser
     ? Response.json({ ok: true, handoff: choices[0], choices: [], ...common })
     : Response.json({ ok: true, choices, products: choices, ...common });
 }
@@ -401,14 +456,14 @@ function withProductionHeaders(request: Request, response: Response) {
     `form-action 'self' ${
       websiteEnvironment(request) === "staging"
         ? STAGING_HANDOFF_ORIGINS.join(" ")
-        : "https://*.corecaresystems.co.uk"
+        : PRODUCTION_HANDOFF_ORIGINS.join(" ")
     }`,
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
     `script-src 'self'${nonce ? ` 'nonce-${nonce}' 'strict-dynamic'` : ""} https://challenges.cloudflare.com`,
     "script-src-attr 'none'",
-    "connect-src 'self' https://*.corecaresystems.co.uk https://challenges.cloudflare.com",
+    "connect-src 'self' https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
   ];
   if (production) directives.push("upgrade-insecure-requests");
