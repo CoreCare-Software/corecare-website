@@ -12,7 +12,8 @@ type TurnstileApi = {
     action: string;
     callback: (token: string) => void;
     "expired-callback": () => void;
-    "error-callback": () => void;
+    "timeout-callback": () => void;
+    "error-callback": (errorCode: string) => boolean;
   }) => TurnstileWidgetId;
   reset: (widgetId: TurnstileWidgetId) => void;
 };
@@ -23,12 +24,24 @@ declare global {
   }
 }
 
+export type TurnstileStatus = "expired" | "timeout" | "error";
 export type TurnstileHandle = { reset: () => void };
 
-export const TurnstileWidget = forwardRef<TurnstileHandle, { action: string; onToken: (token: string) => void }>(
-  function TurnstileWidget({ action, onToken }, ref) {
+type TurnstileWidgetProps = {
+  action: string;
+  onToken: (token: string) => void;
+  onStatus?: (status: TurnstileStatus) => void;
+};
+
+export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(
+  function TurnstileWidget({ action, onToken, onStatus }, ref) {
     const container = useRef<HTMLDivElement>(null);
     const widgetId = useRef<TurnstileWidgetId | null>(null);
+
+    function clear(status?: TurnstileStatus) {
+      onToken("");
+      if (status) onStatus?.(status);
+    }
 
     function renderWidget() {
       if (!container.current || widgetId.current !== null || !window.turnstile) return;
@@ -36,8 +49,12 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, { action: string; onT
         sitekey: SITE_KEY,
         action,
         callback: onToken,
-        "expired-callback": () => onToken(""),
-        "error-callback": () => onToken(""),
+        "expired-callback": () => clear("expired"),
+        "timeout-callback": () => clear("timeout"),
+        "error-callback": () => {
+          clear("error");
+          return true;
+        },
       });
     }
 
@@ -53,6 +70,7 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, { action: string; onT
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onReady={renderWidget}
+        onError={() => clear("error")}
       />
       <div ref={container} aria-label="Security verification" />
       <p>Security verification helps us prevent automated abuse.</p>
