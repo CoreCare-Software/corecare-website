@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
-import { TurnstileWidget, type TurnstileHandle } from "../turnstile-widget";
+import { FormEvent, useCallback, useRef, useState } from "react";
+import { TurnstileWidget, type TurnstileHandle, type TurnstileStatus } from "../turnstile-widget";
 import {
   isExpectedMobileCallback,
   type MobileAuthorizationRequest,
@@ -13,6 +13,7 @@ type MobileLoginResponse = {
   code?: string;
   error?: string;
   redirectUrl?: string;
+  requestId?: string;
 };
 
 export function MobileLoginClient({
@@ -23,14 +24,34 @@ export function MobileLoginClient({
   initialError: string;
 }) {
   const turnstile = useRef<TurnstileHandle>(null);
+  const turnstileToken = useRef("");
+  const [turnstileReady, setTurnstileReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialError);
-  const [turnstileToken, setTurnstileToken] = useState("");
+
+  const receiveTurnstileToken = useCallback((token: string) => {
+    turnstileToken.current = token;
+    setTurnstileReady(Boolean(token));
+    if (token) setMessage("");
+  }, []);
+
+  const receiveTurnstileStatus = useCallback((status: TurnstileStatus) => {
+    turnstileToken.current = "";
+    setTurnstileReady(false);
+    setMessage(status === "expired"
+      ? "The security check expired. Complete it again before signing in."
+      : status === "timeout"
+        ? "The security check timed out. Complete it again before signing in."
+        : "The security check could not be completed. Refresh it and try again.");
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!authorization || busy) return;
-    if (!turnstileToken) {
+
+    const activeTurnstileToken = turnstileToken.current;
+    if (!activeTurnstileToken) {
+      setTurnstileReady(false);
       setMessage("Please complete the security check before continuing.");
       return;
     }
@@ -47,10 +68,10 @@ export function MobileLoginClient({
           ...authorization,
           email: String(form.get("email") || ""),
           password: String(form.get("password") || ""),
-          turnstileToken,
+          turnstileToken: activeTurnstileToken,
         }),
       });
-      const result = (await response.json()) as MobileLoginResponse;
+      const result = await response.json().catch(() => ({})) as MobileLoginResponse;
 
       if (
         response.ok &&
@@ -62,17 +83,18 @@ export function MobileLoginClient({
         return;
       }
 
-      setMessage(
-        result.error ||
-          (result.code === "MFA_REQUIRED"
-            ? "This account requires additional verification that CoreCare Mobile does not support yet. No sign-in was completed."
-            : "CoreCare could not complete this mobile sign-in."),
-      );
+      const requestId = result.requestId || response.headers.get("x-request-id") || "";
+      const baseMessage = result.error ||
+        (result.code === "MFA_REQUIRED"
+          ? "This account requires additional verification that CoreCare Mobile does not support yet. No sign-in was completed."
+          : "CoreCare could not complete this mobile sign-in.");
+      setMessage(requestId ? `${baseMessage} Reference: ${requestId}` : baseMessage);
     } catch {
       setMessage("CoreCare could not be reached. Check your connection and try again.");
     } finally {
       setBusy(false);
-      setTurnstileToken("");
+      turnstileToken.current = "";
+      setTurnstileReady(false);
       turnstile.current?.reset();
     }
   }
@@ -121,7 +143,12 @@ export function MobileLoginClient({
             </label>
 
             {authorization ? (
-              <TurnstileWidget ref={turnstile} action="login" onToken={setTurnstileToken} />
+              <TurnstileWidget
+                ref={turnstile}
+                action="login"
+                onToken={receiveTurnstileToken}
+                onStatus={receiveTurnstileStatus}
+              />
             ) : null}
 
             {message ? (
@@ -130,7 +157,11 @@ export function MobileLoginClient({
               </p>
             ) : null}
 
-            <button className={styles.button} type="submit" disabled={!authorization || busy}>
+            <button
+              className={styles.button}
+              type="submit"
+              disabled={!authorization || busy || !turnstileReady}
+            >
               {busy ? "Signing in securely..." : "Sign in and return to CoreCare Mobile"}
             </button>
           </form>
