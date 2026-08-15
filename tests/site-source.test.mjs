@@ -181,3 +181,26 @@ test("Turnstile site key is environment-scoped and staging cannot leak into prod
   assert.match(mobileClient, /siteKey=\{turnstileSiteKey\}/);
   assert.match(widget, /siteKey \|\| DEFAULT_SITE_KEY/);
 });
+
+test("Turnstile test-key metadata trust cannot be reached with a production secret, and never bypasses the request-hostname allowlist", async () => {
+  const helper = await readFile(new URL("../app/api/_shared/turnstile.ts", import.meta.url), "utf8");
+
+  // result.metadata.result_with_testing_key is set by Cloudflare's siteverify
+  // endpoint itself only when the *secret* used to call it is one of
+  // Cloudflare's documented test secrets; it cannot be forged by a
+  // client-supplied token, so trusting it does not weaken verification.
+  // Production never configures a test secret (see the site-key test above
+  // and the staging-only wrangler config), so this branch can never be taken
+  // for a real production Turnstile verification.
+  assert.match(helper, /result\.metadata\?\.result_with_testing_key === true/);
+
+  // Even when the test-key branch is taken, the request's own hostname must
+  // still pass the environment's TURNSTILE_HOSTNAMES allowlist check before
+  // verification succeeds -- the test-key branch only relaxes the provider's
+  // echoed action/hostname fields (which test tokens do not populate
+  // meaningfully), never the caller's own hostname gate.
+  assert.match(helper, /if \(!expectedHostnames\.has\(requestHostname\)\) return \{ ok: false, reason: "hostname_mismatch" \}/);
+  assert.match(helper, /const hostname = usedTestKey \? requestHostname : clean\(result\.hostname, 253\)\.toLowerCase\(\);/);
+  assert.match(helper, /if \(!expectedHostnames\.has\(hostname\) \|\| hostname !== requestHostname\)/);
+});
+

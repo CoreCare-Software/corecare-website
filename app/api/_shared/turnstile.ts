@@ -7,6 +7,7 @@ type TurnstileResult = {
   action?: string;
   hostname?: string;
   "error-codes"?: unknown;
+  metadata?: { result_with_testing_key?: boolean };
 };
 
 export type TurnstileFailureReason =
@@ -104,9 +105,21 @@ export async function verifyTurnstileDetailed(
     const providerAccepted = result.success === true;
     if (!providerAccepted) return { ok: false, reason: providerFailureReason(result) };
 
+    // Cloudflare's official test secret keys (see
+    // https://developers.cloudflare.com/turnstile/troubleshooting/testing/)
+    // echo a fixed hostname ("example.com") and omit `action` because the
+    // dummy token carries no real challenge context. `result.metadata.result_with_testing_key`
+    // is set only by Cloudflare itself when the *secret* we sent is one of its
+    // documented test secrets — it cannot be forged by a client-supplied
+    // token, so trusting it does not weaken verification. Production never
+    // configures a test secret, so this branch can never be reached there.
+    // The request's own hostname must still be in this environment's
+    // configured allowlist either way.
+    const usedTestKey = result.metadata?.result_with_testing_key === true;
+
     const action = clean(result.action, 80);
-    const hostname = clean(result.hostname, 253).toLowerCase();
-    const expectedActionMatched = result.action === expectedAction;
+    const hostname = usedTestKey ? requestHostname : clean(result.hostname, 253).toLowerCase();
+    const expectedActionMatched = usedTestKey || result.action === expectedAction;
     if (!expectedActionMatched) return { ok: false, reason: "action_mismatch" };
     if (!expectedHostnames.has(hostname) || hostname !== requestHostname) {
       return { ok: false, reason: "hostname_mismatch" };
