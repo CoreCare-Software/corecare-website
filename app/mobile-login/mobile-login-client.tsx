@@ -37,9 +37,11 @@ type Stage = "credentials" | "mfa" | "password" | "recovery";
 export function MobileLoginClient({
   authorization,
   initialError,
+  turnstileSiteKey = "",
 }: {
   authorization: MobileAuthorizationRequest | null;
   initialError: string;
+  turnstileSiteKey?: string;
 }) {
   const turnstile = useRef<TurnstileHandle>(null);
   const turnstileToken = useRef("");
@@ -223,7 +225,7 @@ export function MobileLoginClient({
               <label className={styles.label}>Password
                 <input className={styles.input} name="password" type="password" autoComplete="current-password" required disabled={!authorization || busy} />
               </label>
-              {authorization ? <TurnstileWidget ref={turnstile} action="login" onToken={receiveTurnstileToken} onStatus={receiveTurnstileStatus} /> : null}
+              {authorization ? <TurnstileWidget ref={turnstile} action="login" onToken={receiveTurnstileToken} onStatus={receiveTurnstileStatus} siteKey={turnstileSiteKey} /> : null}
               <button className={styles.button} type="submit" disabled={!authorization || busy || !turnstileReady}>
                 {busy ? "Signing in securely..." : "Continue securely"}
               </button>

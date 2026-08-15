@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import LoginClient from "./login-client";
@@ -61,6 +62,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       initialProduct={query.product || ""}
       initialError={LOGIN_ERRORS[query.error || ""] || ""}
       mobileAuthorization={mobileAuthorization}
+      turnstileSiteKey={String((env as unknown as Record<string, unknown>).TURNSTILE_SITE_KEY || "")}
     />
   );
 }
