@@ -3,7 +3,10 @@
 import Script from "next/script";
 import { forwardRef, useImperativeHandle, useRef } from "react";
 
-const SITE_KEY = "0x4AAAAAAEHZA3fx6EQ1VoTI";
+// Fallback only; every real deployment must supply an explicit environment-scoped
+// site key (see TURNSTILE_SITE_KEY in wrangler.cloudflare.jsonc). Production and
+// staging must never share this fallback value in practice.
+const DEFAULT_SITE_KEY = "0x4AAAAAAEHZA3fx6EQ1VoTI";
 
 type TurnstileWidgetId = string;
 type TurnstileApi = {
@@ -31,10 +34,11 @@ type TurnstileWidgetProps = {
   action: string;
   onToken: (token: string) => void;
   onStatus?: (status: TurnstileStatus) => void;
+  siteKey?: string;
 };
 
 export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>(
-  function TurnstileWidget({ action, onToken, onStatus }, ref) {
+  function TurnstileWidget({ action, onToken, onStatus, siteKey }, ref) {
     const container = useRef<HTMLDivElement>(null);
     const widgetId = useRef<TurnstileWidgetId | null>(null);
 
@@ -46,7 +50,7 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>
     function renderWidget() {
       if (!container.current || widgetId.current !== null || !window.turnstile) return;
       widgetId.current = window.turnstile.render(container.current, {
-        sitekey: SITE_KEY,
+        sitekey: siteKey || DEFAULT_SITE_KEY,
         action,
         callback: onToken,
         "expired-callback": () => clear("expired"),

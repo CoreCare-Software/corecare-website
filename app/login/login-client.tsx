@@ -81,10 +81,12 @@ export default function LoginClient({
   initialProduct = "",
   initialError = "",
   mobileAuthorization = null,
+  turnstileSiteKey = "",
 }: {
   initialProduct?: string;
   initialError?: string;
   mobileAuthorization?: MobileAuthorization | null;
+  turnstileSiteKey?: string;
 }) {
   const validInitial = CUSTOMER_PRODUCTS.some((item) => item.code === initialProduct.toUpperCase())
     ? initialProduct.toUpperCase()
@@ -367,7 +369,7 @@ export default function LoginClient({
                   </span>
                   {capsLock ? <small id="caps-lock-note" className="field-note" role="status">Caps Lock is on.</small> : null}
                 </label>
-                <TurnstileWidget ref={turnstile} action="login" onToken={setTurnstileToken} />
+                <TurnstileWidget ref={turnstile} action="login" onToken={setTurnstileToken} siteKey={turnstileSiteKey} />
                 <button className="button auth-submit" disabled={busy || !turnstileToken}>
                   {busy ? "Checking your account..." : isMobileAuthorization ? "Continue to CoreCare Mobile" : "Continue securely"}
                 </button>

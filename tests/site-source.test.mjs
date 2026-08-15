@@ -147,3 +147,37 @@ test("protects every public write form with end-to-end Turnstile validation", as
   assert.match(config, /TURNSTILE_HOSTNAMES/);
   assert.doesNotMatch(config, /TURNSTILE_SECRET/);
 });
+
+test("Turnstile site key is environment-scoped and staging cannot leak into production", async () => {
+  const [config, widget, loginPage, loginClient, mobilePage, mobileClient] = await Promise.all([
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+    readFile(new URL("../app/turnstile-widget.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/login-client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mobile-login/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/mobile-login/mobile-login-client.tsx", import.meta.url), "utf8"),
+  ]);
+
+  const config_parsed = JSON.parse(config.replace(/\/\/.*$/gm, ""));
+  const productionSiteKey = config_parsed.vars.TURNSTILE_SITE_KEY;
+  const stagingSiteKey = config_parsed.env.staging.vars.TURNSTILE_SITE_KEY;
+
+  // Production must use a real (non-test) Cloudflare site key.
+  assert.ok(productionSiteKey && !productionSiteKey.startsWith("1x0000") && !productionSiteKey.startsWith("2x0000") && !productionSiteKey.startsWith("3x0000"),
+    "production TURNSTILE_SITE_KEY must not be a Cloudflare test sitekey");
+  // Staging must use one of Cloudflare's official documented test sitekeys, never the production key.
+  assert.match(stagingSiteKey, /^[123]x0000000000000000000/);
+  assert.notEqual(stagingSiteKey, productionSiteKey);
+  // The staging config must never carry a real-looking secret inline (secrets are set via `wrangler secret put`).
+  assert.doesNotMatch(config, /TURNSTILE_SECRET/);
+
+  // Both login surfaces must read the site key from the environment-scoped var (server-rendered),
+  // not a single hardcoded constant, and thread it down to the widget as a prop.
+  assert.match(loginPage, /unknown>\)\.TURNSTILE_SITE_KEY/);
+  assert.match(mobilePage, /unknown>\)\.TURNSTILE_SITE_KEY/);
+  assert.match(loginClient, /turnstileSiteKey/);
+  assert.match(mobileClient, /turnstileSiteKey/);
+  assert.match(loginClient, /siteKey=\{turnstileSiteKey\}/);
+  assert.match(mobileClient, /siteKey=\{turnstileSiteKey\}/);
+  assert.match(widget, /siteKey \|\| DEFAULT_SITE_KEY/);
+});

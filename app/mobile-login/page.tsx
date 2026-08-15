@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { env } from "cloudflare:workers";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { MobileLoginClient } from "./mobile-login-client";
@@ -50,5 +51,11 @@ export default async function MobileLoginPage({
   }
 
   const parsed = parseMobileAuthorizationSearch(params);
-  return <MobileLoginClient authorization={parsed.request} initialError={parsed.error} />;
+  return (
+    <MobileLoginClient
+      authorization={parsed.request}
+      initialError={parsed.error}
+      turnstileSiteKey={String((env as unknown as Record<string, unknown>).TURNSTILE_SITE_KEY || "")}
+    />
+  );
 }
