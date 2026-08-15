@@ -26,7 +26,7 @@ $artifact = Get-Content $ArtifactPath -Raw | ConvertFrom-Json
 $secure = ConvertTo-SecureString $artifact.protectedCredential
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try {
-  $password = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+  $password = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
 } finally {
   [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
 }
