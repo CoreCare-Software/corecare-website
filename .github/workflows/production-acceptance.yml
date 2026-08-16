@@ -1,0 +1,69 @@
+name: CoreCare Website Production Canary Acceptance
+
+# CORECARE_LIVE_PRODUCTION_ACCEPTANCE_STANDARD_V1 — Website wrapper
+# ===================================================================
+# Standard:  https://github.com/CoreCare-Software/corecare-platform/blob/ac0de7be5afa23823fb594a4835625b0a5aae2de/docs/CORECARE-LIVE-PRODUCTION-ACCEPTANCE-STANDARD-V1.md
+# Reusable:  https://github.com/CoreCare-Software/corecare-platform/blob/ac0de7be5afa23823fb594a4835625b0a5aae2de/.github/workflows/corecare-live-acceptance-reusable.yml
+# Adoption:  docs/operations/LIVE-PRODUCTION-ACCEPTANCE-ADOPTION.md
+#
+# This is the CoreCare Website manual wrapper for live production canary
+# acceptance. It delegates all logic to the canonical reusable workflow
+# owned and maintained by CoreCare Platform.
+#
+# Trigger model:
+#   workflow_dispatch ONLY.
+#   MUST NOT run on: pull_request, push, schedule, or any other event.
+#   Ordinary PRs and main merges are validated exclusively by verify.yml.
+#
+# Production targets (Website):
+#   Website: https://www.corecaresystems.co.uk
+#
+# Required secrets (GitHub Actions — production website credentials only):
+#   CORECARE_PROD_WEBSITE_SMOKE_EMAIL  — dedicated canary account email for One Login
+#   CORECARE_PROD_WEBSITE_SMOKE_PASS   — dedicated canary account password for One Login
+#
+# Write boundary:
+#   All checks are READ-ONLY at the business-data level.
+#   No form submission, trial creation, contact creation, database write,
+#   deployment or password change is permitted.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_live_read_only:
+        description: >
+          Type exactly: RUN_LIVE_READ_ONLY_ACCEPTANCE
+          Confirms this run is read-only and uses only dedicated canary
+          accounts — never real customer accounts or credentials.
+        required: true
+        type: string
+      candidate_sha:
+        description: 'Exact source SHA to record in evidence (defaults to HEAD if blank)'
+        required: false
+        type: string
+
+# One Website acceptance run at a time. A new trigger cancels in-progress runs.
+concurrency:
+  group: website-production-acceptance
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  website-acceptance:
+    name: Website live production canary acceptance
+    uses: CoreCare-Software/corecare-platform/.github/workflows/corecare-live-acceptance-reusable.yml@ac0de7be5afa23823fb594a4835625b0a5aae2de
+    with:
+      product_code: WEBSITE
+      production_origin: https://www.corecaresystems.co.uk
+      health_path: /api/health
+      version_path: /api/version
+      evidence_name: website-canary-evidence
+      maturity_status: production_live
+      confirm_live_read_only: ${{ inputs.confirm_live_read_only }}
+      candidate_sha: ${{ inputs.candidate_sha }}
+      run_playwright: true
+    secrets:
+      canary_email: ${{ secrets.CORECARE_PROD_WEBSITE_SMOKE_EMAIL }}
+      canary_pass: ${{ secrets.CORECARE_PROD_WEBSITE_SMOKE_PASS }}
