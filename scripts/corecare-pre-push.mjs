@@ -78,7 +78,7 @@ for (const name of config.scripts) {
   console.log(`\n> npm run ${name}`);
   const result = spawnSync(npmCommand, ['run', '--silent', name], {
     cwd: root,
-    stdio: 'inherit',
+    stdio: ['ignore', 'inherit', 'inherit'],
     shell: useShell,
     env: { ...process.env, CORECARE_PRE_PUSH: '1' },
   });
