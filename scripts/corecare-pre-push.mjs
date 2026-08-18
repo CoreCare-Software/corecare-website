@@ -31,24 +31,75 @@ const scripts = packageManifest.scripts || {};
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const useShell = process.platform === 'win32';
 
+function commandSegments(command) {
+  return String(command).split(/&&|\|\||;|[\r\n]+|[&|]/u);
+}
+
+function stripTokenQuotes(token) {
+  return token.replace(/^["']|["']$/gu, '');
+}
+
+function rawCommandTokens(segment) {
+  return segment.trim().split(/\s+/u).filter(Boolean);
+}
+
+function commandTokens(segment) {
+  return rawCommandTokens(segment).map(stripTokenQuotes);
+}
+
+function hasSplitBoundaryQuote(token) {
+  const startsQuoted = /^["']/u.test(token);
+  const endsQuoted = /["']$/u.test(token);
+  return startsQuoted !== endsQuoted;
+}
+
 function referencedNpmScripts(command) {
   const references = [];
-  const pattern = /\bnpm(?:\.cmd)?\s+(?:run|run-script)\s+([A-Za-z0-9:_-]+)/giu;
-  for (const match of String(command).matchAll(pattern)) references.push(match[1]);
+  for (const segment of commandSegments(command)) {
+    const rawTokens = rawCommandTokens(segment);
+    const tokens = rawTokens.map(stripTokenQuotes);
+    for (let index = 0; index < tokens.length; index += 1) {
+      if (!/^npm(?:\.cmd)?$/iu.test(tokens[index])) continue;
+      const runIndex = tokens.findIndex((token, candidate) => candidate > index && /^(?:run|run-script)$/iu.test(token));
+      if (runIndex === -1) continue;
+      const rawScript = rawTokens[runIndex + 1];
+      const script = tokens[runIndex + 1];
+      if (!rawScript || hasSplitBoundaryQuote(rawScript) || !script || script.startsWith('-') || !/^[A-Za-z0-9:_-]+$/u.test(script)) {
+        fail(`cannot safely parse nested npm run in script command: ${segment.trim()}`);
+      }
+      references.push(script);
+      index = runIndex + 1;
+    }
+  }
   return references;
+}
+
+function wranglerDryRunSafety(segment) {
+  const tokens = commandTokens(segment);
+  const lowered = tokens.map((token) => token.toLowerCase());
+  let bareDryRun = false;
+  for (let index = 0; index < lowered.length; index += 1) {
+    const token = lowered[index];
+    if (token.startsWith('--dry-run=')) return 'non-bare Wrangler --dry-run option';
+    if (token !== '--dry-run') continue;
+    const next = lowered[index + 1];
+    if (next && !next.startsWith('-')) return 'non-bare Wrangler --dry-run option';
+    bareDryRun = true;
+  }
+  return bareDryRun ? null : 'non-dry-run Wrangler deploy command';
 }
 
 function unsafeCommand(name, command) {
   const loweredName = name.toLowerCase();
   if (/(^|:)(deploy|publish|promote|upload)(:|$)/u.test(loweredName)) return 'mutation-capable script name';
   if (/db:migrate:(remote|staging|production)/u.test(loweredName)) return 'remote migration script name';
-  for (const segment of String(command).split(/&&|\|\||;|[\r\n]+|[&|]/u)) {
+  for (const segment of commandSegments(command)) {
     const lowered = segment.toLowerCase();
     if (/wrangler\s+versions\s+upload/u.test(lowered)) return 'Worker version upload command';
     if (/wrangler\s+d1\s+migrations\s+apply[^\n]*--remote/u.test(lowered)) return 'remote D1 migration command';
     if (/wrangler\s+deploy/u.test(lowered)) {
-      if (/--dry-run\s*=/u.test(lowered)) return 'non-bare Wrangler --dry-run option';
-      if (!/(?:^|\s)--dry-run(?:\s|$)/u.test(lowered)) return 'non-dry-run Wrangler deploy command';
+      const reason = wranglerDryRunSafety(segment);
+      if (reason) return reason;
     }
   }
   return null;
@@ -56,7 +107,9 @@ function unsafeCommand(name, command) {
 
 const validated = new Set();
 function validateScript(name, stack = []) {
-  if (typeof name !== 'string' || !name.trim()) fail('every configured script must be a non-empty string');
+  if (typeof name !== 'string' || !/^[A-Za-z0-9:_-]+$/u.test(name)) {
+    fail('every configured script name must use only letters, digits, :, _ or -');
+  }
   if (validated.has(name)) return;
   if (stack.includes(name)) fail(`npm script cycle detected: ${[...stack, name].join(' -> ')}`);
   const command = scripts[name];
