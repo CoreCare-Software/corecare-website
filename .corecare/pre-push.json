@@ -1,5 +1,11 @@
 {
   "protocol": "corecare-local-pre-push/1",
   "standard": "CORECARE_ENGINEERING_OPERATING_STANDARD_V1",
-  "scripts": ["lint", "test", "check", "check:staging"]
+  "scripts": [
+    "lint",
+    "test",
+    "db:migrate:local",
+    "check",
+    "check:staging"
+  ]
 }

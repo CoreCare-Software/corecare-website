@@ -8,16 +8,16 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
 
-function fail(message) {
+function fail(message, code = 1) {
   console.error(`FAIL CoreCare pre-push: ${message}`);
-  process.exit(1);
+  process.exit(code);
 }
 
 function readJson(relativePath) {
   try {
     return JSON.parse(readFileSync(path.join(root, relativePath), 'utf8'));
   } catch (error) {
-    fail(`could not read ${relativePath}: ${error.message}`);
+    fail(`cannot read ${relativePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -27,46 +27,62 @@ if (config.protocol !== 'corecare-local-pre-push/1') fail('unsupported .corecare
 if (config.standard !== 'CORECARE_ENGINEERING_OPERATING_STANDARD_V1') fail('canonical engineering standard is not declared');
 if (!Array.isArray(config.scripts) || config.scripts.length === 0) fail('at least one local gate script is required');
 
+const scripts = packageManifest.scripts || {};
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const useShell = process.platform === 'win32';
-const scripts = packageManifest.scripts || {};
 
-function unsafeScript(name, command) {
+function referencedNpmScripts(command) {
+  const references = [];
+  const pattern = /\bnpm(?:\.cmd)?\s+(?:run|run-script)\s+([A-Za-z0-9:_-]+)/giu;
+  for (const match of String(command).matchAll(pattern)) references.push(match[1]);
+  return references;
+}
+
+function unsafeCommand(name, command) {
   const loweredName = name.toLowerCase();
-  const loweredCommand = String(command).toLowerCase();
   if (/(^|:)(deploy|publish|promote|upload)(:|$)/u.test(loweredName)) return 'mutation-capable script name';
   if (/db:migrate:(remote|staging|production)/u.test(loweredName)) return 'remote migration script name';
-  if (/wrangler\s+versions\s+upload/u.test(loweredCommand)) return 'Worker version upload command';
-  if (/wrangler\s+d1\s+migrations\s+apply[^\n]*--remote/u.test(loweredCommand)) return 'remote D1 migration command';
-  if (/wrangler\s+deploy/u.test(loweredCommand) && !/--dry-run/u.test(loweredCommand)) return 'non-dry-run Wrangler deploy command';
+  for (const segment of String(command).split(/&&|\|\||;/u)) {
+    const lowered = segment.toLowerCase();
+    if (/wrangler\s+versions\s+upload/u.test(lowered)) return 'Worker version upload command';
+    if (/wrangler\s+d1\s+migrations\s+apply[^\n]*--remote/u.test(lowered)) return 'remote D1 migration command';
+    if (/wrangler\s+deploy/u.test(lowered)) {
+      if (/--dry-run\s*=/u.test(lowered)) return 'non-bare Wrangler --dry-run option';
+      if (!/(?:^|\s)--dry-run(?:\s|$)/u.test(lowered)) return 'non-dry-run Wrangler deploy command';
+    }
+  }
   return null;
 }
 
-const plan = [];
-for (const name of config.scripts) {
+const validated = new Set();
+function validateScript(name, stack = []) {
   if (typeof name !== 'string' || !name.trim()) fail('every configured script must be a non-empty string');
+  if (validated.has(name)) return;
+  if (stack.includes(name)) fail(`npm script cycle detected: ${[...stack, name].join(' -> ')}`);
   const command = scripts[name];
   if (typeof command !== 'string' || !command.trim()) fail(`package.json is missing script ${name}`);
-  const unsafeReason = unsafeScript(name, command);
+  const unsafeReason = unsafeCommand(name, command);
   if (unsafeReason) fail(`refusing ${name} (${unsafeReason})`);
-  plan.push({ name, command });
+  for (const referenced of referencedNpmScripts(command)) validateScript(referenced, [...stack, name]);
+  validated.add(name);
 }
 
+for (const name of config.scripts) validateScript(name);
 if (process.argv.includes('--plan')) {
-  for (const item of plan) console.log(`${item.name}: ${item.command}`);
+  for (const name of config.scripts) console.log(`${name}: ${scripts[name]}`);
   process.exit(0);
 }
 
-console.log(`CoreCare pre-push: running ${plan.map((item) => item.name).join(', ')}`);
-for (const item of plan) {
-  console.log(`\n> npm run ${item.name}`);
-  const result = spawnSync(npmCommand, ['run', '--silent', item.name], {
+console.log(`CoreCare pre-push: running ${config.scripts.join(', ')}`);
+for (const name of config.scripts) {
+  console.log(`\n> npm run ${name}`);
+  const result = spawnSync(npmCommand, ['run', '--silent', name], {
     cwd: root,
     stdio: 'inherit',
     shell: useShell,
     env: { ...process.env, CORECARE_PRE_PUSH: '1' },
   });
-  if (result.error) fail(`${item.name} could not start: ${result.error.message}`);
-  if (result.status !== 0) fail(`${item.name} exited ${result.status}`);
+  if (result.error) fail(`${name} could not start: ${result.error.message}`);
+  if (result.status !== 0) fail(`${name} exited ${result.status}`, result.status || 1);
 }
 console.log('\nPASS CoreCare local pre-push gate');
