@@ -35,8 +35,15 @@ function commandSegments(command) {
   return String(command).split(/&&|\|\||;|[\r\n]+|[&|]/u);
 }
 
+function matchingBoundaryQuote(token) {
+  if (typeof token !== 'string' || token.length < 2) return null;
+  const first = token[0];
+  const last = token[token.length - 1];
+  return (first === '"' || first === "'") && first === last ? first : null;
+}
+
 function stripTokenQuotes(token) {
-  return token.replace(/^["']|["']$/gu, '');
+  return matchingBoundaryQuote(token) ? token.slice(1, -1) : token;
 }
 
 function rawCommandTokens(segment) {
@@ -48,9 +55,11 @@ function commandTokens(segment) {
 }
 
 function hasSplitBoundaryQuote(token) {
-  const startsQuoted = /^["']/u.test(token);
-  const endsQuoted = /["']$/u.test(token);
-  return startsQuoted !== endsQuoted;
+  const first = token[0];
+  const last = token[token.length - 1];
+  const startsQuoted = first === '"' || first === "'";
+  const endsQuoted = last === '"' || last === "'";
+  return (startsQuoted || endsQuoted) && !matchingBoundaryQuote(token);
 }
 
 function referencedNpmScripts(command) {
@@ -97,7 +106,7 @@ function unsafeCommand(name, command) {
     const lowered = segment.toLowerCase();
     if (/wrangler\s+versions\s+upload/u.test(lowered)) return 'Worker version upload command';
     if (/wrangler\s+d1\s+migrations\s+apply[^\n]*--remote/u.test(lowered)) return 'remote D1 migration command';
-    if (/wrangler\s+deploy/u.test(lowered)) {
+    if (/wrangler\s+deploy(?:\s|$)/u.test(lowered)) {
       const reason = wranglerDryRunSafety(segment);
       if (reason) return reason;
     }
@@ -108,7 +117,7 @@ function unsafeCommand(name, command) {
 const validated = new Set();
 function validateScript(name, stack = []) {
   if (typeof name !== 'string' || !/^[A-Za-z0-9:_-]+$/u.test(name)) {
-    fail('every configured script name must use only letters, digits, :, _ or -');
+    fail(`every configured script name must use only letters, digits, :, _ or - (including referenced scripts); received ${JSON.stringify(name)}`);
   }
   if (validated.has(name)) return;
   if (stack.includes(name)) fail(`npm script cycle detected: ${[...stack, name].join(' -> ')}`);
