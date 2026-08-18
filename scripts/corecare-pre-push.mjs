@@ -42,7 +42,7 @@ function unsafeCommand(name, command) {
   const loweredName = name.toLowerCase();
   if (/(^|:)(deploy|publish|promote|upload)(:|$)/u.test(loweredName)) return 'mutation-capable script name';
   if (/db:migrate:(remote|staging|production)/u.test(loweredName)) return 'remote migration script name';
-  for (const segment of String(command).split(/&&|\|\||;/u)) {
+  for (const segment of String(command).split(/&&|\|\||;|[\r\n]+|[&|]/u)) {
     const lowered = segment.toLowerCase();
     if (/wrangler\s+versions\s+upload/u.test(lowered)) return 'Worker version upload command';
     if (/wrangler\s+d1\s+migrations\s+apply[^\n]*--remote/u.test(lowered)) return 'remote D1 migration command';
