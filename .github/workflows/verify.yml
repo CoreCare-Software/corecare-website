@@ -22,11 +22,5 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: node scripts/corecare-pre-push.mjs --plan
-      - run: npm run lint
-      - run: npm test
-      - run: npm audit
-      - run: npm run db:migrate:local
-      - run: npm run check
-      - run: npm run check:staging
+      - run: npm ci --ignore-scripts
+      - run: npm run verify:pr
