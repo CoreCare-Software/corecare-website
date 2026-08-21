@@ -11,9 +11,9 @@
 
 The canonical CoreCare Live Production Acceptance Standard is owned and maintained by CoreCare Platform at:
 
-- **Standard Document**: [CORECARE-LIVE-PRODUCTION-ACCEPTANCE-STANDARD-V1.md](https://github.com/CoreCare-Software/corecare-platform/blob/ac0de7be5afa23823fb594a4835625b0a5aae2de/docs/CORECARE-LIVE-PRODUCTION-ACCEPTANCE-STANDARD-V1.md)
-- **Reusable Workflow**: [corecare-live-acceptance-reusable.yml](https://github.com/CoreCare-Software/corecare-platform/blob/ac0de7be5afa23823fb594a4835625b0a5aae2de/.github/workflows/corecare-live-acceptance-reusable.yml)  
-  (pinned at commit: `ac0de7be5afa23823fb594a4835625b0a5aae2de`)
+- **Standard Document**: [CORECARE-LIVE-PRODUCTION-ACCEPTANCE-STANDARD-V1.md](https://github.com/CoreCare-Software/corecare-platform/blob/01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2/docs/CORECARE-LIVE-PRODUCTION-ACCEPTANCE-STANDARD-V1.md)
+- **Reusable Workflow**: [corecare-live-acceptance-reusable.yml](https://github.com/CoreCare-Software/corecare-platform/blob/01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2/.github/workflows/corecare-live-acceptance-reusable.yml)  
+  (pinned at commit: `01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2`)
 
 All implementation details, trigger constraints, identity boundaries, write restrictions, and evidence requirements are documented in the Platform repository. This document summarizes the adoption status and product-specific configuration for the Website.
 
