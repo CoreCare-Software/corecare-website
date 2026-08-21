@@ -2,9 +2,7 @@
   "name": "corecare-systems-website",
   "version": "1.0.0",
   "private": true,
-  "engines": {
-    "node": ">=22.13.0"
-  },
+  "engines": {"node": ">=22.13.0"},
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
@@ -19,38 +17,13 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.cloudflare.jsonc",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc",
     "db:migrate:staging": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc --env staging",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "verify:fast": "npm run lint",
+    "verify:pr": "npm run verify:fast && npm run test && npm run check",
+    "verify:release": "npm run verify:pr && npm audit --audit-level=high && npm run db:migrate:local && npm run check:staging && npm run test:browser"
   },
-  "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "next": "16.3.1",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
-  },
-  "devDependencies": {
-    "@cloudflare/vite-plugin": "1.53.0",
-    "@playwright/test": "1.62.1",
-    "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "26.2.0",
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.4",
-    "@vitejs/plugin-react": "6.0.5",
-    "@vitejs/plugin-rsc": "0.5.34",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
-    "eslint-config-next": "16.3.1",
-    "react-server-dom-webpack": "19.2.8",
-    "tailwindcss": "4.3.3",
-    "typescript": "5.9.3",
-    "vinext": "0.0.45",
-    "vite": "8.2.1",
-    "wrangler": "4.124.0"
-  },
+  "dependencies": {"drizzle-orm":"0.45.2","next":"16.3.1","react":"19.2.8","react-dom":"19.2.8"},
+  "devDependencies": {"@cloudflare/vite-plugin":"1.53.0","@playwright/test":"1.62.1","@tailwindcss/postcss":"4.3.3","@types/node":"26.2.0","@types/react":"19.2.18","@types/react-dom":"19.2.4","@vitejs/plugin-react":"6.0.5","@vitejs/plugin-rsc":"0.5.34","drizzle-kit":"0.31.10","eslint":"9.39.4","eslint-config-next":"16.3.1","react-server-dom-webpack":"19.2.8","tailwindcss":"4.3.3","typescript":"5.9.3","vinext":"0.0.45","vite":"8.2.1","wrangler":"4.124.0"},
   "type": "module",
-  "overrides": {
-    "undici": "^7.29.0",
-    "@esbuild-kit/core-utils": {
-      "esbuild": "^0.25.12"
-    }
-  }
+  "overrides": {"undici":"^7.29.0","@esbuild-kit/core-utils":{"esbuild":"^0.25.12"}}
 }
