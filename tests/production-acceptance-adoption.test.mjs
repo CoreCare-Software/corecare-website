@@ -90,8 +90,8 @@ describe("Production Acceptance Adoption Tests", () => {
       );
     });
 
-    test("must pin to exact commit SHA ac0de7be5afa23823fb594a4835625b0a5aae2de", () => {
-      const expectedSha = "ac0de7be5afa23823fb594a4835625b0a5aae2de";
+    test("must pin to exact commit SHA 01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2", () => {
+      const expectedSha = "01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2";
       assert(
         workflowYaml.includes(expectedSha),
         `❌ FAIL: workflow not pinned to commit SHA ${expectedSha}`

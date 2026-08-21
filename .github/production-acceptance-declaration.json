@@ -5,7 +5,7 @@
   "maturity_status": "production_live",
   "adoption_date": "2026-08-16",
   "standard_version": "CORECARE_LIVE_PRODUCTION_ACCEPTANCE_STANDARD_V1",
-  "reusable_workflow_sha": "ac0de7be5afa23823fb594a4835625b0a5aae2de",
+  "reusable_workflow_sha": "01da9c6abf6cbe8aee8eceeb45c3e2ee7af603a2",
   "production_origin": "https://www.corecaresystems.co.uk",
   "health_path": "/api/health",
   "version_path": "/api/version",
