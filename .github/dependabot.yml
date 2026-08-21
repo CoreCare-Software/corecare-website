@@ -20,6 +20,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Dependabot cannot authenticate to this private cross-repository source.
+      # Keep its immutable SHA under explicit Platform/Website review instead.
+      - dependency-name: "CoreCare-Software/corecare-platform/.github/workflows/corecare-live-acceptance-reusable.yml"
     groups:
       compatible-minor-and-patch:
         applies-to: version-updates
