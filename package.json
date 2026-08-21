@@ -19,7 +19,10 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.cloudflare.jsonc",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc",
     "db:migrate:staging": "wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.jsonc --env staging",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "verify:fast": "npm run lint",
+    "verify:pr": "npm run verify:fast && npm run test && npm run check",
+    "verify:release": "npm run verify:pr && npm run check:staging && npm run test:browser"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
