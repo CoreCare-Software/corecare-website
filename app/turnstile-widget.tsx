@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 // Fallback only; every real deployment must supply an explicit environment-scoped
 // site key (see TURNSTILE_SITE_KEY in wrangler.cloudflare.jsonc). Production and
@@ -19,6 +19,7 @@ type TurnstileApi = {
     "error-callback": (errorCode: string) => boolean;
   }) => TurnstileWidgetId;
   reset: (widgetId: TurnstileWidgetId) => void;
+  remove: (widgetId: TurnstileWidgetId) => void;
 };
 
 declare global {
@@ -68,6 +69,14 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, TurnstileWidgetProps>
         onToken("");
       },
     }), [onToken]);
+
+    useEffect(() => () => {
+      const activeWidgetId = widgetId.current;
+      if (activeWidgetId !== null && window.turnstile) {
+        window.turnstile.remove(activeWidgetId);
+        widgetId.current = null;
+      }
+    }, []);
 
     return <div className="turnstile-wrap">
       <Script

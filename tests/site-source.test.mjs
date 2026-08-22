@@ -126,6 +126,8 @@ test("protects every public write form with end-to-end Turnstile validation", as
   ]);
   assert.match(widget, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=explicit/);
   assert.match(widget, /window\.turnstile\.reset/);
+  assert.match(widget, /window\.turnstile\.remove\(activeWidgetId\)/);
+  assert.match(widget, /widgetId\.current = null/);
   for (const [source, action] of [[loginClient, "login"], [trialClient, "trial"], [contactClient, "contact"], [rightsClient, "data_rights"]]) {
     assert.match(source, new RegExp(`action="${action}"`));
     assert.match(source, /turnstileToken/);
